@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Pimp City — Admin</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #000; font-family: Tahoma, Verdana, sans-serif; font-size: 12px; color: #fff; padding: 16px; }
+h2 { color: #ffcc33; font-size: 13px; border-bottom: 1px solid #336600; padding-bottom: 4px; margin-bottom: 10px; }
+h3 { color: #ffcc33; font-size: 12px; margin-bottom: 6px; }
+.panel { border: 1px solid #336600; padding: 12px; margin-bottom: 14px; background: #0a0a0a; }
+.panel.danger { border-color: #660000; }
+.danger-zone-toggle { color: #cc0033; cursor: pointer; font-size: 11px; font-family: Verdana; }
+.danger-zone-toggle:hover { color: #ff3333; }
+#danger-zone-body { display: none; }
+table { width: 100%; border-collapse: collapse; font-size: 11px; }
+th { background: #1a2e00; color: #ffcc33; padding: 4px 6px; text-align: left; font-family: Verdana; border-bottom: 1px solid #336600; }
+td { padding: 3px 6px; border-bottom: 1px solid #1a1a1a; color: #ccc; font-family: Verdana; }
+tr:hover td { background: #111; }
+tr.selected td { background: #1a3300; }
+.btn { background: #1a2e00; border: 1px solid #336600; color: #ffcc33; padding: 4px 10px; cursor: pointer; font-family: Verdana; font-size: 11px; }
+.btn:hover { background: #336600; }
+.btn.red { border-color: #660000; color: #cc0033; background: #1a0000; }
+.btn.red:hover { background: #330000; }
+.btn.small { padding: 2px 6px; font-size: 10px; }
+input, select { background: #111; border: 1px solid #336600; color: #fff; padding: 3px 6px; font-family: Verdana; font-size: 11px; }
+input:focus, select:focus { outline: none; border-color: #ffcc33; }
+label { color: #aaa; font-size: 11px; font-family: Verdana; }
+.field-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.field-row label { width: 90px; flex-shrink: 0; }
+.field-row input, .field-row select { width: 140px; }
+#log { background: #050505; border: 1px solid #222; padding: 8px; font-size: 10px; font-family: monospace; color: #666; max-height: 120px; overflow-y: auto; }
+#log .entry { color: #4a8; margin-bottom: 2px; }
+#log .entry.warn { color: #fa0; }
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; align-items: center; justify-content: center; }
+.modal-overlay.active { display: flex; }
+.modal { background: #0a0a0a; border: 2px solid #cc0033; padding: 20px; width: 340px; }
+.modal h3 { color: #cc0033; margin-bottom: 10px; }
+.modal p { color: #ccc; font-size: 11px; margin-bottom: 12px; line-height: 1.6; font-family: Verdana; }
+.modal input { width: 100%; margin-bottom: 10px; }
+.modal-btns { display: flex; gap: 8px; }
+#access-denied { display: none; color: #cc0033; font-size: 18px; text-align: center; padding: 60px; font-family: Verdana; }
+#admin-body { display: none; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.tag { font-size: 10px; padding: 1px 5px; border-radius: 2px; }
+.tag.online { background: #1a3300; color: #66cc33; }
+.info-val { color: #ffcc33; font-family: monospace; }
+</style>
+</head>
+<body>
+
+<div id="login-screen" style="display:none; max-width:300px; margin:80px auto; padding:24px; border:1px solid #336600; background:#0a0a0a;">
+  <div style="color:#ffcc33; font-size:14px; font-family:Verdana; margin-bottom:16px; border-bottom:1px solid #336600; padding-bottom:8px;"><b>PIMP CITY — ADMIN LOGIN</b></div>
+  <div style="margin-bottom:8px;"><label style="color:#aaa;font-size:11px;font-family:Verdana;display:block;margin-bottom:3px;">Pimp Name</label><input id="login-name" style="width:100%;" placeholder="your pimp name"></div>
+  <div style="margin-bottom:12px;"><label style="color:#aaa;font-size:11px;font-family:Verdana;display:block;margin-bottom:3px;">Password</label><input id="login-pass" type="password" style="width:100%;"></div>
+  <button class="btn" onclick="doAdminLogin()" style="width:100%;">Log In</button>
+  <div id="login-error" style="color:#cc0033;font-size:11px;font-family:Verdana;margin-top:8px;display:none;"></div>
+</div>
+<div id="access-denied">⛔ ACCESS DENIED</div>
+<div id="admin-body">
+
+  <div style="border-bottom: 3px solid #ffcc33; margin-bottom: 14px; padding-bottom: 6px; display:flex; align-items:center; justify-content:space-between;">
+    <span style="color:#ffcc33; font-size:15px; font-family:Verdana;"><b>PIMP CITY — ADMIN TOOLKIT</b></span>
+    <span id="admin-user-label" style="color:#666; font-size:10px; font-family:monospace;"></span>
+  </div>
+
+  <div class="grid2">
+
+    <!-- LEFT COLUMN -->
+    <div>
+
+      <!-- PLAYERS PANEL -->
+      <div class="panel">
+        <h2>Players <span style="color:#666;font-size:10px;font-weight:normal;" id="player-count"></span>
+          <button class="btn small" style="float:right;margin-top:-2px;" onclick="loadPlayers()">↻ Refresh</button>
+        </h2>
+        <div style="overflow-x:auto; max-height: 260px; overflow-y:auto;">
+          <table id="players-table">
+            <thead><tr>
+              <th>#</th><th>Name</th><th>ID</th><th>Rnd</th><th>City</th><th>NW</th><th>Turns</th><th>Select</th>
+            </tr></thead>
+            <tbody id="players-tbody"><tr><td colspan="7" style="color:#555;text-align:center;">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ATTACK LOG -->
+      <div class="panel">
+        <h2>Attack Log
+          <button class="btn small" style="float:right;margin-top:-2px;" onclick="loadAttacks()">↻ Refresh</button>
+        </h2>
+        <div style="margin-bottom:8px;">
+          <input id="atk-filter" placeholder="Filter by name..." style="width:160px;" oninput="filterAttacks()">
+        </div>
+        <div style="overflow-x:auto; max-height:200px; overflow-y:auto;">
+          <table id="attacks-table">
+            <thead><tr><th>Time</th><th>From</th><th>To</th><th>Type</th><th>Result</th></tr></thead>
+            <tbody id="attacks-tbody"><tr><td colspan="5" style="color:#555;text-align:center;">Click Refresh</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- HALL OF FAME -->
+      <div class="panel">
+        <h2>Hall of Fame
+          <button class="btn small" style="float:right;margin-top:-2px;" onclick="loadHallOfFame()">↻ Refresh</button>
+        </h2>
+        <div style="overflow-x:auto; max-height:160px; overflow-y:auto;">
+          <table id="hof-table">
+            <thead><tr><th>Round</th><th>Winner</th><th>Net Worth</th><th>Date</th></tr></thead>
+            <tbody id="hof-tbody"><tr><td colspan="4" style="color:#555;text-align:center;">Click Refresh</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+
+      <!-- ROUND HISTORY PANEL -->
+      <div class="panel">
+        <h2>Round History
+          <button class="btn small" style="float:right;margin-top:-2px;" onclick="loadRoundHistory()">↻ Refresh</button>
+        </h2>
+        <div style="margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+          <label>Round:</label>
+          <select id="rh-round-select" style="width:80px;" onchange="renderRoundHistory()">
+            <option value="">—</option>
+          </select>
+          <span id="rh-player-count" style="color:#555; font-size:10px; font-family:monospace;"></span>
+        </div>
+        <div style="overflow-x:auto; max-height:220px; overflow-y:auto;">
+          <table id="rh-table">
+            <thead><tr><th>Rank</th><th>Name</th><th>ID</th><th>City</th><th>NW</th><th>Hoes</th><th>Thugs</th></tr></thead>
+            <tbody id="rh-tbody"><tr><td colspan="7" style="color:#555;text-align:center;">Click Refresh</td></tr></tbody>
+          </table>
+        </div>
+        <div style="margin-top:8px;">
+          <button class="btn small" onclick="exportRoundHistory()">⬇ Export Selected Round</button>
+        </div>
+      </div>
+
+      <!-- EXPORT PANEL -->
+      <div class="panel">
+        <h2>Export Player Data</h2>
+        <p style="color:#666; font-size:11px; font-family:Verdana; margin-bottom:10px; line-height:1.6;">
+          Downloads pull live data from Firebase. Use <b style="color:#aaa;">Export All</b> for round archival.
+          Use <b style="color:#aaa;">Export Individual Files</b> for per-player dispute records.<br>
+          Note: your browser may prompt permission for multiple downloads.
+        </p>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn" onclick="exportAllCombined()">⬇ Export All Players (Combined)</button>
+          <button class="btn" onclick="exportIndividualFiles()">⬇ Export Individual Files</button>
+        </div>
+        <div id="export-status" style="color:#666; font-size:10px; font-family:monospace; margin-top:8px; display:none;"></div>
+      </div>
+
+    </div><!-- end left col -->
+
+    <!-- RIGHT COLUMN -->
+    <div>
+
+      <!-- PLAYER EDIT PANEL -->
+      <div class="panel" id="edit-panel">
+        <h2>Edit Player — <span id="edit-player-name" style="color:#ccc;font-weight:normal;">none selected</span></h2>
+        <div id="edit-form" style="display:none;">
+          <div class="field-row"><label>Cash</label><input id="ef-cash" type="number"></div>
+          <div class="field-row"><label>Turns</label><input id="ef-turns" type="number"></div>
+          <div class="field-row"><label>Tokens</label><input id="ef-tokens" type="number"></div>
+          <div class="field-row"><label>Hoes</label><input id="ef-hoes" type="number"></div>
+          <div class="field-row"><label>Thugs</label><input id="ef-thugs" type="number"></div>
+          <div class="field-row"><label>Rides</label><input id="ef-rides" type="number"></div>
+          <div class="field-row"><label>Crack</label><input id="ef-crack" type="number"></div>
+          <div class="field-row"><label>Condoms</label><input id="ef-condoms" type="number"></div>
+          <div class="field-row"><label>Weed</label><input id="ef-weed" type="number"></div>
+          <div class="field-row"><label>Beer</label><input id="ef-beer" type="number"></div>
+          <div class="field-row"><label>AK-47s</label><input id="ef-ak" type="number"></div>
+          <div class="field-row"><label>Kevlar Vests</label><input id="ef-vest" type="number"></div>
+          <div class="field-row"><label>City</label>
+            <select id="ef-city">
+              <option value="nyc">New York City</option>
+              <option value="london">London</option>
+              <option value="atlanta">Atlanta</option>
+              <option value="vegas">Las Vegas</option>
+            </select>
+          </div>
+          <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn" onclick="savePlayerEdits()">💾 Save Changes</button>
+            <button class="btn" onclick="clearEditForm()">✕ Cancel</button>
+            <button class="btn" onclick="toggleRawJson()" style="margin-left:auto;">{ } Raw JSON</button>
+          </div>
+          <pre id="raw-json" style="display:none;margin-top:10px;background:#050505;padding:8px;font-size:10px;color:#888;max-height:200px;overflow:auto;border:1px solid #222;"></pre>
+          <div style="margin-top:12px; border-top:1px solid #1a1a1a; padding-top:10px;">
+            <button class="btn red small" onclick="confirmDisable()">⚠ Disable Account</button>
+            <button class="btn red small" onclick="confirmDelete()" style="margin-left:6px;">☠ Permanently Delete</button>
+          </div>
+        </div>
+        <div id="edit-placeholder" style="color:#555;font-size:11px;font-family:Verdana;">Select a player from the table to edit.</div>
+      </div>
+
+      <!-- ROUND & TICK PANEL -->
+      <div class="panel">
+        <h2>Round &amp; Tick</h2>
+        <div style="margin-bottom:10px; font-family:Verdana; font-size:11px; line-height:2;">
+          Round ID: <span class="info-val" id="info-roundid">—</span><br>
+          Round ends: <span class="info-val" id="info-roundend">—</span><br>
+          Time remaining: <span class="info-val" id="info-timeleft">—</span><br>
+          Last tick: <span class="info-val" id="info-lasttick">—</span><br>
+          Next tick in: <span class="info-val" id="info-nexttick">—</span>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+          <button class="btn" onclick="extendRound(1)">+1 Day</button>
+          <button class="btn" onclick="extendRound(7)">+7 Days</button>
+          <button class="btn" onclick="promptCustomEnd()">Set Custom End</button>
+          <button class="btn" onclick="forceTick()">⚡ Force Tick Now</button>
+        </div>
+        <button class="btn" onclick="refreshTickInfo()">↻ Refresh</button>
+      </div>
+
+      <!-- DANGER ZONE -->
+      <div class="panel danger">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+          <h2 style="border-color:#660000; color:#cc0033; margin-bottom:0;">⚠ Danger Zone</h2>
+          <span class="danger-zone-toggle" onclick="toggleDangerZone()">[expand]</span>
+        </div>
+        <div id="danger-zone-body">
+          <p style="color:#666; font-size:11px; font-family:Verdana; margin-bottom:10px; line-height:1.6;">
+            Starting a new round increments roundId — every player will see the activation screen on next login and their assets will reset.
+          </p>
+          <button class="btn red" onclick="confirmNewRound()">☠ Start New Round</button>
+        </div>
+      </div>
+
+      <!-- ACTION LOG -->
+      <div class="panel">
+        <h2>Session Log</h2>
+        <div id="log"><span style="color:#333; font-size:10px; font-family:monospace;">No actions yet.</span></div>
+      </div>
+
+    </div><!-- end right col -->
+  </div><!-- end grid -->
+</div><!-- end admin-body -->
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <h3 id="modal-title">Confirm Action</h3>
+    <p id="modal-desc"></p>
+    <input id="modal-input" placeholder='Type CONFIRM to proceed' autocomplete="off">
+    <div class="modal-btns">
+      <button class="btn red" onclick="executeConfirmedAction()">Execute</button>
+      <button class="btn" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOM DATE MODAL -->
+<div class="modal-overlay" id="date-modal-overlay">
+  <div class="modal">
+    <h3>Set Custom Round End</h3>
+    <p>Enter the new round end date and time.</p>
+    <input type="datetime-local" id="custom-date-input" style="width:100%;margin-bottom:10px;">
+    <div class="modal-btns">
+      <button class="btn" onclick="applyCustomEnd()">Set</button>
+      <button class="btn" onclick="closeDateModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ADMIN_UID = '7P2gO7Vfx6fwj7eKi481nSAZh262';
+const TICK_INTERVAL_MS = 600000;
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBO63O99sVTuIvWTLlwyAk-ej77TUA74WY",
+  authDomain: "pimp-city.firebaseapp.com",
+  databaseURL: "https://pimp-city-default-rtdb.firebaseio.com",
+  projectId: "pimp-city",
+  storageBucket: "pimp-city.firebasestorage.app",
+  messagingSenderId: "41670433277",
+  appId: "1:41670433277:web:945aa16d820c6ef30ce194"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+const CITY_VALS = { nyc:'New York City', london:'London', atlanta:'Atlanta', vegas:'Las Vegas' };
+let allPlayers = [];
+let allAttacksRaw = [];
+let selectedUid = null;
+let selectedPlayerData = null;
+let pendingAction = null;
+let tickInterval = null;
+
+// ---- AUTH CHECK ----
+auth.onAuthStateChanged(user => {
+  if (user && user.uid === ADMIN_UID) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('admin-body').style.display = 'block';
+    document.getElementById('admin-user-label').textContent = 'Logged in as: ' + user.uid;
+    loadPlayers();
+    refreshTickInfo();
+    startTickCountdown();
+  } else if (user) {
+    // Logged in but not admin
+    document.getElementById('access-denied').style.display = 'block';
+  } else {
+    // Not logged in — show login form
+    document.getElementById('login-screen').style.display = 'block';
+  }
+});
+
+function doAdminLogin() {
+  const name = document.getElementById('login-name').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  if (!name || !pass) { errEl.textContent = 'Enter name and password.'; errEl.style.display = 'block'; return; }
+  const email = name + '@idlepimps.game';
+  auth.signInWithEmailAndPassword(email, pass).catch(err => {
+    errEl.textContent = 'Login failed: ' + err.message;
+    errEl.style.display = 'block';
+  });
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none') doAdminLogin();
+});
+
+// ---- UTILITIES ----
+function fmt(n) { return Number(n||0).toLocaleString(); }
+function nw(p) {
+  return (p.cash||0) + (p.hoes||0)*250 + (p.thugs||0)*1000 + (p.rides||0)*1000 + (p.crack||0)*2;
+}
+function tsAgo(ms) {
+  if (!ms) return '—';
+  const diff = Date.now() - ms;
+  if (diff < 60000) return Math.floor(diff/1000) + 's ago';
+  if (diff < 3600000) return Math.floor(diff/60000) + 'm ago';
+  if (diff < 86400000) return Math.floor(diff/3600000) + 'h ago';
+  return Math.floor(diff/86400000) + 'd ago';
+}
+function fmtDate(ms) {
+  if (!ms) return '—';
+  return new Date(ms).toLocaleString();
+}
+function addLog(msg, warn=false) {
+  const log = document.getElementById('log');
+  const first = log.querySelector('span');
+  if (first && first.style.color === 'rgb(51, 51, 51)') log.innerHTML = '';
+  const d = document.createElement('div');
+  d.className = 'entry' + (warn ? ' warn' : '');
+  d.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg;
+  log.prepend(d);
+}
+
+// ---- PLAYERS ----
+function loadPlayers() {
+  const tbody = document.getElementById('players-tbody');
+  tbody.innerHTML = '<tr><td colspan="8" style="color:#555;text-align:center;">Loading...</td></tr>';
+  db.ref('players').once('value', snap => {
+    allPlayers = [];
+    snap.forEach(child => {
+      const p = child.val();
+      p.uid = child.key;
+      allPlayers.push(p);
+    });
+    allPlayers.sort((a,b) => nw(b) - nw(a));
+    document.getElementById('player-count').textContent = '(' + allPlayers.length + ')';
+    renderPlayersTable();
+    addLog('Loaded ' + allPlayers.length + ' players.');
+  });
+}
+function renderPlayersTable() {
+  const tbody = document.getElementById('players-tbody');
+  tbody.innerHTML = '';
+  if (!allPlayers.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="color:#555;text-align:center;">No players found.</td></tr>';
+    return;
+  }
+  allPlayers.forEach((p, i) => {
+    const tr = document.createElement('tr');
+    if (p.uid === selectedUid) tr.className = 'selected';
+    tr.innerHTML = `<td>${i+1}</td>
+      <td style="color:#ffcc66;">${p.name||'?'}${p.disabled ? ' <span style="color:#cc0033">[OFF]</span>' : ''}</td>
+      <td style="color:#999;">${p.id||'?'}</td>
+      <td style="color:${p.roundId ? '#66cc33' : '#666'};">${p.roundId||'—'}</td>
+      <td>${CITY_VALS[p.city]||p.city||'?'}</td>
+      <td style="color:#cc0033;">$${fmt(nw(p))}</td>
+      <td>${fmt(p.turns||0)}</td>
+      <td><button class="btn small" onclick="selectPlayer('${p.uid}')">Edit</button></td>`;
+    tbody.appendChild(tr);
+  });
+}
+function selectPlayer(uid) {
+  selectedUid = uid;
+  selectedPlayerData = allPlayers.find(p => p.uid === uid);
+  if (!selectedPlayerData) return;
+  const p = selectedPlayerData;
+  document.getElementById('edit-player-name').textContent = p.name + ' (#' + (p.id||'?') + ')';
+  document.getElementById('edit-placeholder').style.display = 'none';
+  document.getElementById('edit-form').style.display = 'block';
+  const fields = ['cash','turns','tokens','hoes','thugs','rides','crack','condoms','weed','beer','ak','vest'];
+  fields.forEach(f => { const el = document.getElementById('ef-'+f); if (el) el.value = p[f]||0; });
+  document.getElementById('ef-city').value = p.city || 'nyc';
+  document.getElementById('raw-json').textContent = JSON.stringify(p, null, 2);
+  document.getElementById('raw-json').style.display = 'none';
+  renderPlayersTable();
+}
+function clearEditForm() {
+  selectedUid = null;
+  selectedPlayerData = null;
+  document.getElementById('edit-player-name').textContent = 'none selected';
+  document.getElementById('edit-form').style.display = 'none';
+  document.getElementById('edit-placeholder').style.display = 'block';
+  renderPlayersTable();
+}
+function toggleRawJson() {
+  const el = document.getElementById('raw-json');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function savePlayerEdits() {
+  if (!selectedUid) return;
+  const fields = ['cash','turns','tokens','hoes','thugs','rides','crack','condoms','weed','beer','ak','vest'];
+  const updates = {};
+  fields.forEach(f => { updates[f] = parseInt(document.getElementById('ef-'+f).value)||0; });
+  updates.city = document.getElementById('ef-city').value;
+  db.ref('players/' + selectedUid).update(updates, err => {
+    if (err) { addLog('Save failed: ' + err.message, true); return; }
+    addLog('Saved edits for ' + (selectedPlayerData.name||selectedUid) + '.');
+    const p = allPlayers.find(x => x.uid === selectedUid);
+    if (p) Object.assign(p, updates);
+    renderPlayersTable();
+  });
+}
+function confirmDisable() {
+  if (!selectedUid) return;
+  openModal(
+    'Disable Account',
+    'This will set disabled=true on ' + (selectedPlayerData.name||selectedUid) + '. They will be blocked on next login but their data is preserved.',
+    () => {
+      db.ref('players/' + selectedUid).update({ disabled: true }, err => {
+        if (err) { addLog('Disable failed: ' + err.message, true); return; }
+        addLog('Disabled account: ' + (selectedPlayerData.name||selectedUid), true);
+        const p = allPlayers.find(x => x.uid === selectedUid);
+        if (p) p.disabled = true;
+        renderPlayersTable();
+      });
+    }
+  );
+}
+function confirmDelete() {
+  if (!selectedUid) return;
+  openModal(
+    '☠ PERMANENTLY DELETE',
+    'This will PERMANENTLY delete all data for ' + (selectedPlayerData.name||selectedUid) + '. This cannot be undone.',
+    () => {
+      db.ref('players/' + selectedUid).remove(err => {
+        if (err) { addLog('Delete failed: ' + err.message, true); return; }
+        addLog('DELETED player: ' + (selectedPlayerData.name||selectedUid), true);
+        allPlayers = allPlayers.filter(x => x.uid !== selectedUid);
+        clearEditForm();
+        renderPlayersTable();
+      });
+    }
+  );
+}
+
+// ---- TICK & ROUND ----
+function refreshTickInfo() {
+  db.ref('tick').once('value', snap => {
+    const tick = snap.val();
+    if (!tick) return;
+    document.getElementById('info-roundid').textContent = tick.roundId || '—';
+    document.getElementById('info-roundend').textContent = fmtDate(tick.roundEndTime);
+    document.getElementById('info-lasttick').textContent = tsAgo(tick.lastTickTime);
+    const left = tick.roundEndTime - Date.now();
+    const days = Math.floor(left / 86400000);
+    const hrs = Math.floor((left % 86400000) / 3600000);
+    const mins = Math.floor((left % 3600000) / 60000);
+    document.getElementById('info-timeleft').textContent = left > 0 ? `${days}d ${hrs}h ${mins}m` : 'ENDED';
+  });
+}
+function startTickCountdown() {
+  if (tickInterval) clearInterval(tickInterval);
+  tickInterval = setInterval(() => {
+    db.ref('tick/lastTickTime').once('value', snap => {
+      const last = snap.val();
+      if (!last) return;
+      const secsLeft = Math.max(0, Math.ceil((TICK_INTERVAL_MS - (Date.now() - last)) / 1000));
+      document.getElementById('info-nexttick').textContent = secsLeft + 's';
+    });
+  }, 2000);
+}
+function extendRound(days) {
+  db.ref('tick/roundEndTime').once('value', snap => {
+    const current = snap.val() || Date.now();
+    const newEnd = current + days * 86400000;
+    db.ref('tick/roundEndTime').set(newEnd, err => {
+      if (err) { addLog('Extend failed: ' + err.message, true); return; }
+      addLog('Extended round by ' + days + ' day(s). New end: ' + fmtDate(newEnd));
+      refreshTickInfo();
+    });
+  });
+}
+function promptCustomEnd() { document.getElementById('date-modal-overlay').classList.add('active'); }
+function closeDateModal() { document.getElementById('date-modal-overlay').classList.remove('active'); }
+function applyCustomEnd() {
+  const val = document.getElementById('custom-date-input').value;
+  if (!val) return;
+  const ms = new Date(val).getTime();
+  db.ref('tick/roundEndTime').set(ms, err => {
+    if (err) { addLog('Set end failed: ' + err.message, true); return; }
+    addLog('Round end set to ' + fmtDate(ms));
+    refreshTickInfo();
+    closeDateModal();
+  });
+}
+
+function forceTick() {
+  openModal(
+    'Force Tick',
+    'This will award 40 turns to ALL players immediately and update the shared tick timestamp.',
+    () => {
+      db.ref('players').once('value', snap => {
+        const updates = {};
+        snap.forEach(child => {
+          const p = child.val();
+          const newTurns = Math.min(4000, (p.turns||0) + 40);
+          updates['players/' + child.key + '/turns'] = newTurns;
+        });
+        updates['tick/lastTickTime'] = Date.now();
+        db.ref().update(updates, err => {
+          if (err) { addLog('Force tick failed: ' + err.message, true); return; }
+          addLog('Force tick applied to ' + Object.keys(updates).length + ' players.');
+          refreshTickInfo();
+          loadPlayers();
+        });
+      });
+    }
+  );
+}
+function confirmNewRound() {
+  openModal(
+    '☠ START NEW ROUND',
+    'This will increment roundId. Every player will see the activation screen on next login and their assets will reset to default. This CANNOT be undone.',
+    () => {
+      db.ref('tick/roundId').once('value', snap => {
+        const current = snap.val() || 1;
+        const next = current + 1;
+        db.ref('tick').update({
+          roundId: next,
+          roundEndTime: Date.now() + 7 * 86400000
+        }, err => {
+          if (err) { addLog('New round failed: ' + err.message, true); return; }
+          addLog('NEW ROUND started. roundId is now ' + next, true);
+          refreshTickInfo();
+        });
+      });
+    }
+  );
+}
+function toggleDangerZone() {
+  const body = document.getElementById('danger-zone-body');
+  const toggle = document.querySelector('.danger-zone-toggle');
+  if (body.style.display === 'none') {
+    body.style.display = 'block';
+    toggle.textContent = '[collapse]';
+  } else {
+    body.style.display = 'none';
+    toggle.textContent = '[expand]';
+  }
+}
+
+// ---- ATTACK LOG ----
+function loadAttacks() {
+  const tbody = document.getElementById('attacks-tbody');
+  tbody.innerHTML = '<tr><td colspan="5" style="color:#555;text-align:center;">Loading...</td></tr>';
+  db.ref('attacks').limitToLast(100).once('value', snap => {
+    allAttacksRaw = [];
+    snap.forEach(child => { allAttacksRaw.push(child.val()); });
+    allAttacksRaw.reverse();
+    addLog('Loaded ' + allAttacksRaw.length + ' attack records.');
+    filterAttacks();
+  });
+}
+function filterAttacks() {
+  const q = document.getElementById('atk-filter').value.toLowerCase();
+  const filtered = q ? allAttacksRaw.filter(a =>
+    (a.fromName||'').toLowerCase().includes(q) || (a.toName||'').toLowerCase().includes(q)
+  ) : allAttacksRaw;
+  const tbody = document.getElementById('attacks-tbody');
+  tbody.innerHTML = '';
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:#555;text-align:center;">No results.</td></tr>';
+    return;
+  }
+  filtered.forEach(a => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="color:#555;">${tsAgo(a.time)}</td>
+      <td style="color:#ffcc66;">${a.fromName||'?'}</td>
+      <td style="color:#ffcc66;">${a.toName||'?'}</td>
+      <td>${a.type||'?'}</td>
+      <td style="color:${a.result==='won'?'#66cc33':'#cc0033'}">${a.result||'?'}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// ---- HALL OF FAME ----
+function loadHallOfFame() {
+  const tbody = document.getElementById('hof-tbody');
+  tbody.innerHTML = '<tr><td colspan="4" style="color:#555;text-align:center;">Loading...</td></tr>';
+  db.ref('hall_of_fame').once('value', snap => {
+    const rows = [];
+    snap.forEach(child => { rows.push({ key: child.key, ...child.val() }); });
+    addLog('Loaded ' + rows.length + ' hall of fame entries.');
+    tbody.innerHTML = '';
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="4" style="color:#555;text-align:center;">No entries yet.</td></tr>';
+      return;
+    }
+    rows.sort((a, b) => (b.roundId||0) - (a.roundId||0));
+    rows.forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${r.roundId||r.key}</td>
+        <td style="color:#ffcc66;">${r.name||'?'} (#${r.id||'?'})</td>
+        <td style="color:#cc0033;">$${fmt(r.nw||0)}</td>
+        <td style="color:#555;">${fmtDate(r.ts)}</td>`;
+      tbody.appendChild(tr);
+    });
+  });
+}
+
+// ---- ROUND HISTORY ----
+let roundHistoryData = {}; // { roundId: { endedAt, players: {...} } }
+
+function loadRoundHistory() {
+  const select = document.getElementById('rh-round-select');
+  const tbody = document.getElementById('rh-tbody');
+  tbody.innerHTML = '<tr><td colspan="7" style="color:#555;text-align:center;">Loading...</td></tr>';
+  db.ref('round_history').once('value', snap => {
+    roundHistoryData = {};
+    const rounds = [];
+    snap.forEach(child => {
+      roundHistoryData[child.key] = child.val();
+      rounds.push(child.key);
+    });
+    // Rebuild select options
+    select.innerHTML = '<option value="">—</option>';
+    rounds.sort((a, b) => Number(b) - Number(a)).forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r;
+      opt.textContent = 'Round ' + r;
+      select.appendChild(opt);
+    });
+    if (rounds.length > 0) {
+      select.value = rounds[0];
+      renderRoundHistory();
+    } else {
+      tbody.innerHTML = '<tr><td colspan="7" style="color:#555;text-align:center;">No round history found.</td></tr>';
+    }
+    addLog('Loaded ' + rounds.length + ' round(s) of history.');
+  });
+}
+
+function renderRoundHistory() {
+  const roundId = document.getElementById('rh-round-select').value;
+  const tbody = document.getElementById('rh-tbody');
+  const countEl = document.getElementById('rh-player-count');
+  if (!roundId || !roundHistoryData[roundId]) {
+    tbody.innerHTML = '<tr><td colspan="7" style="color:#555;text-align:center;">Select a round.</td></tr>';
+    countEl.textContent = '';
+    return;
+  }
+  const round = roundHistoryData[roundId];
+  const players = round.players ? Object.values(round.players) : [];
+  players.sort((a, b) => (a.finalRank || 999) - (b.finalRank || 999));
+  countEl.textContent = players.length + ' players';
+  tbody.innerHTML = '';
+  players.forEach(p => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="color:#ffcc33;">#${p.finalRank||'?'}</td>
+      <td style="color:#ffcc66;">${p.name||'?'}</td>
+      <td style="color:#999;">${p.id||'?'}</td>
+      <td>${CITY_VALS[p.city]||p.city||'?'}</td>
+      <td style="color:#cc0033;">$${fmt(p.finalNW||0)}</td>
+      <td>${fmt(p.hoes||0)}</td>
+      <td>${fmt(p.thugs||0)}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function exportRoundHistory() {
+  const roundId = document.getElementById('rh-round-select').value;
+  if (!roundId || !roundHistoryData[roundId]) { addLog('No round selected.', true); return; }
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  triggerDownload(`round${roundId}_history_${timestamp}.json`, roundHistoryData[roundId]);
+  addLog('Exported round ' + roundId + ' history.');
+}
+
+// ---- EXPORT ----
+function triggerDownload(filename, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportAllCombined() {
+  const status = document.getElementById('export-status');
+  status.textContent = 'Fetching players...';
+  status.style.display = 'block';
+  db.ref('players').once('value', snap => {
+    const players = [];
+    snap.forEach(child => {
+      const p = child.val();
+      p._uid = child.key;
+      players.push(p);
+    });
+    players.sort((a, b) => nw(b) - nw(a));
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const roundId = document.getElementById('info-roundid').textContent || 'unknown';
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      roundId: roundId,
+      playerCount: players.length,
+      players: players
+    };
+    triggerDownload(`round${roundId}_players_export_${timestamp}.json`, payload);
+    status.textContent = `Exported ${players.length} players.`;
+    addLog(`Combined export downloaded — ${players.length} players.`);
+  });
+}
+
+function exportIndividualFiles() {
+  const status = document.getElementById('export-status');
+  status.textContent = 'Fetching players...';
+  status.style.display = 'block';
+  db.ref('players').once('value', snap => {
+    const players = [];
+    snap.forEach(child => {
+      const p = child.val();
+      p._uid = child.key;
+      players.push(p);
+    });
+    const roundId = document.getElementById('info-roundid').textContent || 'unknown';
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    let i = 0;
+    function downloadNext() {
+      if (i >= players.length) {
+        status.textContent = `Exported ${players.length} individual files.`;
+        addLog(`Individual export downloaded — ${players.length} files.`);
+        return;
+      }
+      const p = players[i];
+      const safeName = (p.name || 'unknown').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const safeId = p.id || p._uid.slice(0, 8);
+      triggerDownload(`round${roundId}_player_${safeName}_${safeId}_${timestamp}.json`, p);
+      status.textContent = `Downloading ${i + 1} of ${players.length}...`;
+      i++;
+      setTimeout(downloadNext, 300); // slight delay to avoid browser blocking
+    }
+    downloadNext();
+  });
+}
+
+// ---- CONFIRM MODAL ----
+function openModal(title, desc, action) {
+  pendingAction = action;
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-desc').textContent = desc;
+  document.getElementById('modal-input').value = '';
+  document.getElementById('modal-overlay').classList.add('active');
+  setTimeout(() => document.getElementById('modal-input').focus(), 100);
+}
+function closeModal() {
+  pendingAction = null;
+  document.getElementById('modal-overlay').classList.remove('active');
+}
+function executeConfirmedAction() {
+  if (document.getElementById('modal-input').value.trim() !== 'CONFIRM') {
+    document.getElementById('modal-input').style.borderColor = '#cc0033';
+    setTimeout(() => document.getElementById('modal-input').style.borderColor = '#336600', 1000);
+    return;
+  }
+  closeModal();
+  if (pendingAction) pendingAction();
+}
+document.getElementById('modal-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') executeConfirmedAction();
+  if (e.key === 'Escape') closeModal();
+});
+</script>
+</body>
+</html>
