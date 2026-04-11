@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dope Wars — Pimp City</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #000;
+  color: #ccc;
+  font-family: Tahoma, Verdana, sans-serif;
+  font-size: 12px;
+}
+a { color: #FFCC33; text-decoration: none; }
+a:hover { text-decoration: underline; }
+h2 { color: #FFCC33; font-size: 13px; margin-bottom: 6px; }
+h3 { color: #FFCC33; font-size: 12px; margin-bottom: 4px; }
+
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── Layout ── */
+#wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 8px;
+}
+.panel {
+  border: 1px solid #336600;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+.panel-title {
+  background: #336600;
+  color: #FFCC33;
+  font-weight: bold;
+  padding: 3px 6px;
+  margin: -8px -8px 8px -8px;
+  font-size: 12px;
+}
+
+/* ── Buttons ── */
+button {
+  background: #000;
+  border: 1px solid #336600;
+  color: #FFCC33;
+  font-family: Tahoma, Verdana, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 3px 8px;
+}
+button:hover { background: #1a3300; }
+button:disabled { color: #555; border-color: #333; cursor: default; }
+button.btn-primary {
+  background: #336600;
+  color: #FFCC33;
+  font-weight: bold;
+}
+button.btn-primary:hover { background: #447700; }
+
+/* ── Inputs ── */
+input[type=text], input[type=password], input[type=number], select {
+  background: #111;
+  border: 1px solid #336600;
+  color: #ccc;
+  font-family: Tahoma, Verdana, sans-serif;
+  font-size: 12px;
+  padding: 3px 5px;
+}
+input[type=number] { width: 70px; }
+
+/* ── Tables ── */
+table { border-collapse: collapse; width: 100%; }
+th {
+  background: #1a1a00;
+  color: #FFCC33;
+  border: 1px solid #336600;
+  padding: 3px 6px;
+  text-align: left;
+  font-size: 11px;
+}
+td {
+  border: 1px solid #222;
+  padding: 3px 6px;
+  vertical-align: middle;
+}
+tr:nth-child(even) td { background: #0a0a0a; }
+
+/* ── Top bar ── */
+#topbar {
+  border-bottom: 1px solid #336600;
+  padding: 4px 8px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  color: #FFCC33;
+  font-weight: bold;
+}
+#topbar span { color: #ccc; font-weight: normal; margin-left: 4px; }
+#topbar .tb-left, #topbar .tb-right { display: flex; flex-direction: column; gap: 2px; }
+#topbar .tb-right { text-align: right; align-items: flex-end; }
+#topbar .tb-row { display: flex; align-items: center; gap: 0; }
+
+/* ── Two-column layout ── */
+.cols { display: flex; gap: 8px; }
+.col-main { flex: 1 1 auto; }
+.col-side { flex: 0 0 240px; }
+
+/* ── Chat ── */
+#chat-log {
+  background: #050505;
+  border: 1px solid #222;
+  height: 260px;
+  overflow-y: auto;
+  padding: 5px;
+  margin-bottom: 5px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+#chat-log .chat-name { color: #FFCC33; font-weight: bold; }
+#chat-log .chat-sys { color: #555; font-style: italic; }
+#chat-input-row { display: flex; gap: 4px; }
+#chat-input { flex: 1; }
+
+/* ── Notification ── */
+#notify-box {
+  display: none;
+  position: fixed;
+  top: 30px; left: 50%;
+  transform: translateX(-50%);
+  background: #1a3300;
+  border: 1px solid #FFCC33;
+  color: #FFCC33;
+  padding: 8px 20px;
+  z-index: 999;
+  font-weight: bold;
+  font-size: 13px;
+  max-width: 400px;
+  text-align: center;
+}
+
+/* ── Login page ── */
+#page-login {
+  max-width: 360px;
+  margin: 60px auto;
+}
+#login-err { color: #cc3300; margin-top: 6px; min-height: 16px; }
+
+/* ── District tabs ── */
+.district-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+.district-tab {
+  border: 1px solid #336600;
+  padding: 3px 8px;
+  cursor: pointer;
+  color: #ccc;
+  background: #000;
+  font-size: 11px;
+}
+.district-tab.active { background: #336600; color: #FFCC33; font-weight: bold; }
+.district-tab:hover { background: #1a3300; }
+
+/* ── Event banner ── */
+#event-banner {
+  display: none;
+  border: 1px solid #FFCC33;
+  background: #1a1a00;
+  color: #FFCC33;
+  padding: 5px 8px;
+  margin-bottom: 8px;
+  font-style: italic;
+}
+
+/* ── Leaderboard highlight ── */
+.lb-you { background: #0d1a00 !important; color: #FFCC33; font-weight: bold; }
+
+/* ── Event log ── */
+#event-log-panel { flex: 0 0 220px; display: none; }
+#event-log-panel.open { display: block; }
+#event-log {
+  background: #050505;
+  border: 1px solid #222;
+  height: 260px;
+  overflow-y: auto;
+  padding: 5px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+#event-log .ev-entry { color: #888; border-bottom: 1px solid #111; padding: 2px 0; }
+#event-log .ev-entry span { color: #FFCC33; }
+#chat-toggle {
+  writing-mode: vertical-rl;
+  padding: 8px 4px;
+  border: 1px solid #336600;
+  cursor: pointer;
+  color: #555;
+  font-size: 10px;
+  background: #000;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+#chat-toggle:hover { color: #FFCC33; background: #1a3300; }
+.chat-row { display: flex; gap: 4px; }
+</style>
+</head>
+<body>
+<div id="notify-box"></div>
+
+<!-- ════════════════ NOT LOGGED IN ════════════════ -->
+<div id="page-login" class="page">
+  <div class="panel" style="max-width:360px;margin:60px auto">
+    <div class="panel-title">DOPE WARS — PIMP CITY</div>
+    <p style="margin:8px 0;color:#888;">You need to be logged into Pimp City first.</p>
+    <a href="idlepimps.html">← Go to Pimp City</a>
+  </div>
+</div>
+
+<!-- ════════════════ LOADING ════════════════ -->
+<div id="page-loading" class="page active">
+  <div style="max-width:400px;margin:60px auto;font-family:Tahoma,sans-serif;font-size:12px;">
+    <div id="debug-status" style="color:#555;">Initializing...</div>
+  </div>
+</div>
+
+<!-- ════════════════ MAIN GAME PAGE ════════════════ -->
+<div id="page-game" class="page">
+  <div id="wrapper">
+    <!-- Top bar -->
+    <div id="topbar">
+      <div class="tb-left">
+        <div class="tb-row">DOPE WARS &nbsp;|&nbsp; <span id="tb-name">—</span></div>
+        <div class="tb-row">Cash: <span id="tb-cash">$0</span></div>
+        <div class="tb-row">Stash: <span id="tb-stash">0</span>/<span id="tb-coat">100</span></div>
+      </div>
+      <div class="tb-right">
+        <div class="tb-row"><span id="tb-city">—</span>&nbsp;—&nbsp;<span id="tb-district">—</span></div>
+        <div class="tb-row">Market refreshes in: <span id="tb-tick">—</span></div>
+        <div class="tb-row" style="gap:8px">
+          <a href="#" onclick="showTab('leaderboard');return false;">Leaderboard</a>
+          &nbsp;|&nbsp;
+          <a href="#" onclick="doLogout();return false;">Log Out</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Event banner -->
+    <div id="event-banner"></div>
+
+    <!-- Tab: Market -->
+    <div id="tab-market">
+      <div class="cols">
+        <div class="col-main">
+          <!-- District tabs -->
+          <div class="district-tabs" id="district-tabs"></div>
+          <!-- Market table -->
+          <div class="panel">
+            <div class="panel-title"><span id="market-district-label">—</span></div>
+            <table id="market-table">
+              <thead>
+                <tr>
+                  <th>Drug</th><th>Price</th><th>Trend</th>
+                  <th>You Have</th><th>Buy Qty</th><th></th><th></th>
+                </tr>
+              </thead>
+              <tbody id="market-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="col-side">
+          <!-- Inventory -->
+          <div class="panel">
+            <div class="panel-title">YOUR STASH</div>
+            <table id="inv-table">
+              <thead><tr><th>Drug</th><th>Qty</th><th></th></tr></thead>
+              <tbody id="inv-body"></tbody>
+            </table>
+            <div style="margin-top:6px;color:#888">
+              Carrying: <span id="inv-total">0</span> / <span id="inv-max">100</span>
+            </div>
+          </div>
+          <!-- Travel -->
+          <div class="panel">
+            <div class="panel-title">TRAVEL</div>
+            <div id="travel-buttons"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Chat + Event Log -->
+      <div class="panel">
+        <div class="panel-title">
+          CHAT
+          <span style="float:right;font-weight:normal;font-size:11px">
+            <a href="#" onclick="toggleEventLog();return false;" id="evlog-toggle-link">Show Event Log</a>
+          </span>
+        </div>
+        <div class="chat-row">
+          <div style="flex:1">
+            <div id="chat-log"></div>
+            <div id="chat-input-row">
+              <input type="text" id="chat-input" placeholder="Say something..." maxlength="200"
+                onkeydown="if(event.key==='Enter')sendChat()">
+              <button onclick="sendChat()">Send</button>
+            </div>
+          </div>
+          <div id="event-log-panel">
+            <div style="color:#555;font-size:10px;margin-bottom:3px;text-align:center">EVENT LOG</div>
+            <div id="event-log"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Leaderboard -->
+    <div id="tab-leaderboard" style="display:none">
+      <div class="panel">
+        <div class="panel-title">LEADERBOARD — ROUND <span id="lb-round">—</span></div>
+        <p style="margin-bottom:6px;color:#888;font-size:11px">
+          Top player at UTC midnight each day earns 1 token in Pimp City (max 3/round).
+        </p>
+        <table>
+          <thead><tr><th>Rank</th><th>Pimp</th><th>Cash</th><th>Last Active</th></tr></thead>
+          <tbody id="lb-body"></tbody>
+        </table>
+      </div>
+      <div style="margin-top:6px"><a href="#" onclick="showTab('market');return false;">← Back to Market</a></div>
+    </div>
+
+  </div><!-- /wrapper -->
+</div><!-- /page-game -->
+
+<script>
+// ══════════════════════════════════════════════
+//  FIREBASE CONFIG
+// ══════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyBO63O99sVTuIvWTLlwyAk-ej77TUA74WY",
+  authDomain: "pimp-city.firebaseapp.com",
+  databaseURL: "https://pimp-city-default-rtdb.firebaseio.com",
+  projectId: "pimp-city",
+  storageBucket: "pimp-city.firebasestorage.app",
+  messagingSenderId: "41670433277",
+  appId: "1:41670433277:web:945aa16d820c6ef30ce194"
+};
+function dbg(msg) {
+  const el = document.getElementById('debug-status');
+  if (el) el.innerHTML += '<br>' + msg;
+}
+
+firebase.initializeApp(firebaseConfig);
+dbg('Firebase initialized.');
+const auth = firebase.auth();
+const db   = firebase.database();
+dbg('Auth + DB ready. Waiting for auth state...');
+
+// ══════════════════════════════════════════════
+//  CONSTANTS
+// ══════════════════════════════════════════════
+const COAT_SIZE = 100; // max units you can carry
+
+const DRUGS = [
+  { name: 'Adderall',  min: 200,   max: 800   },
+  { name: 'Xanax',     min: 400,   max: 1500  },
+  { name: 'Weed',      min: 300,   max: 900   },
+  { name: 'Shrooms',   min: 600,   max: 2500  },
+  { name: 'Acid',      min: 1000,  max: 4500  },
+  { name: 'Ketamine',  min: 1500,  max: 6000  },
+  { name: 'Meth',      min: 800,   max: 3000  },
+  { name: 'PCP',       min: 1000,  max: 5000  },
+  { name: 'Molly',     min: 2000,  max: 8000  },
+  { name: 'Heroin',    min: 5000,  max: 15000 },
+  { name: 'Coke',      min: 15000, max: 40000 }
+];
+
+const DISTRICTS = {
+  'New York City': ['Harlem','The Bronx','Brooklyn','Queens','Lower East Side'],
+  'London':        ['Brixton','Hackney','Peckham','Camden','Whitechapel'],
+  'Atlanta':       ['Bankhead','Vine City','Old Fourth Ward','Mechanicsville','East Atlanta'],
+  'Las Vegas':     ['Downtown','North Las Vegas','Henderson','Paradise','Winchester']
+};
+
+// Map Firebase city values to display names
+const CITY_MAP = {
+  'nyc':       'New York City',
+  'new york city': 'New York City',
+  'london':    'London',
+  'atlanta':   'Atlanta',
+  'las vegas': 'Las Vegas',
+  'lasvegas':  'Las Vegas'
+};
+
+function resolveCity(raw) {
+  if (!raw) return 'New York City';
+  return CITY_MAP[raw.toLowerCase()] || raw;
+}
+
+// Deterministic per-district price modifier (±10%)
+// Uses district index + drug index as seed so it's consistent every session
+function districtMod(city, district, drugName) {
+  const districts = DISTRICTS[city] || [];
+  const di = districts.indexOf(district);
+  const dri = DRUGS.findIndex(d => d.name === drugName);
+  if (di < 0 || dri < 0) return 1.0;
+  // sin-based deterministic variation — always same value for same district+drug
+  const raw = Math.sin(di * 7.3 + dri * 13.1) * 0.10;
+  return 1.0 + raw; // range: ~0.90 – 1.10
+}
+
+// Random events: [weight, message, fn(state)]
+const EVENTS = [
+  { w:3, msg: 'Cops! You ditched some stash.', fn: evCops },
+  { w:2, msg: 'You got robbed at gunpoint!',   fn: evRobbed },
+  { w:2, msg: 'You found a bag on the street.', fn: evFound },
+  { w:1, msg: 'Prices are going crazy downtown — market just refreshed.', fn: evPriceShock }
+];
+
+// ══════════════════════════════════════════════
+//  GAME STATE
+// ══════════════════════════════════════════════
+let G = {
+  cash: 2000,
+  inventory: {},   // { drugName: qty }
+  city: null,
+  district: null,
+  uid: null,
+  name: null,
+  roundId: null
+};
+
+let currentUser = null;
+let marketData  = {};   // { drugName: { price, trend } }
+let lastTickTime = null;
+let tickCountdown = null;
+let chatListener = null;
+
+// ══════════════════════════════════════════════
+//  MARKET — GENERATION & SYNC
+// ══════════════════════════════════════════════
+
+function generateMarket(city) {
+  const prices = {};
+  DRUGS.forEach(d => {
+    // Each drug has a 15% chance of being unavailable in a given district snapshot
+    // But we generate city-wide prices; districts just share the same pool
+    const price = Math.floor(d.min + Math.random() * (d.max - d.min));
+    const trend = Math.random() < 0.5 ? 'up' : (Math.random() < 0.5 ? 'down' : 'stable');
+    prices[d.name] = { price, trend };
+  });
+  return prices;
+}
+
+function ensureMarket(city, roundId) {
+  const ref = db.ref('dopewars/market/' + city.replace(/ /g,'_'));
+  ref.once('value', snap => {
+    const data = snap.val();
+    if (!data) {
+      // First time — generate and write
+      ref.set(generateMarket(city));
+    } else {
+      marketData = data;
+      renderMarket();
+    }
+  });
+  // Listen for market updates (fired when main game tick runs)
+  ref.on('value', snap => {
+    if (snap.val()) {
+      marketData = snap.val();
+      renderMarket();
+    }
+  });
+}
+
+function refreshMarket(city) {
+  // Called when tick fires — only one client should write
+  const ref = db.ref('dopewars/market/' + city.replace(/ /g,'_'));
+  ref.transaction(current => {
+    return generateMarket(city);
+  });
+}
+
+function watchTick() {
+  db.ref('tick/lastTickTime').on('value', snap => {
+    const t = snap.val();
+    if (!t) return;
+    if (lastTickTime !== null && t !== lastTickTime) {
+      // Tick fired — one client refreshes market
+      if (G.city) refreshMarket(G.city);
+    }
+    lastTickTime = t;
+    updateTickCountdown(t);
+  });
+  db.ref('tick/roundId').once('value', snap => {
+    G.roundId = snap.val() || 1;
+    document.getElementById('lb-round').textContent = G.roundId;
+  });
+}
+
+let _tickInterval = null;
+let _refreshedAtZero = false;
+function updateTickCountdown(lastTick) {
+  if (_tickInterval) clearInterval(_tickInterval);
+  _refreshedAtZero = false;
+  _tickInterval = setInterval(() => {
+    const elapsed = Date.now() - lastTick;
+    const remaining = Math.max(0, 600000 - elapsed);
+    const m = Math.floor(remaining / 60000);
+    const s = Math.floor((remaining % 60000) / 1000);
+    const el = document.getElementById('tb-tick');
+    if (el) el.textContent = m + ':' + String(s).padStart(2,'0');
+    // Fire market refresh when countdown hits zero (in case main game isn't open)
+    if (remaining === 0 && !_refreshedAtZero && G.city) {
+      _refreshedAtZero = true;
+      refreshMarket(G.city);
+    }
+  }, 1000);
+}
+
+// ══════════════════════════════════════════════
+//  BUY / SELL
+// ══════════════════════════════════════════════
+
+function carrying() {
+  return Object.values(G.inventory).reduce((a,b) => a+b, 0);
+}
+
+function doSell(drugName) {
+  const qty = G.inventory[drugName] || 0;
+  if (qty <= 0) return notify('You don\'t have any ' + drugName + '.');
+  const m = marketData[drugName];
+  if (!m) return notify('No market for that here.');
+  const mod = districtMod(G.city, G.district, drugName);
+  const total = Math.round(m.price * mod) * qty;
+  G.cash += total;
+  delete G.inventory[drugName];
+  saveScore();
+  renderAll();
+  logEvent('Sold ' + qty + ' ' + drugName + ' @ $' + fmt(Math.round(total/qty)) + ' = $' + fmt(total));
+  notify('Sold ' + qty + ' ' + drugName + ' for $' + fmt(total) + '.');
+}
+
+function doSellQty(drugName) {
+  const qtyInput = document.getElementById('buy-qty-' + drugName);
+  const qty = parseInt(qtyInput.value) || 0;
+  if (qty <= 0) return notify('Enter a valid quantity.');
+  const have = G.inventory[drugName] || 0;
+  if (qty > have) return notify('You only have ' + have + '.');
+  const price = marketData[drugName] && marketData[drugName].price;
+  if (!price) return notify('No market for that here.');
+  const total = price * qty;
+  G.cash += total;
+  G.inventory[drugName] -= qty;
+  if (G.inventory[drugName] <= 0) delete G.inventory[drugName];
+  qtyInput.value = '';
+  saveScore();
+  renderAll();
+  notify('Sold ' + qty + ' ' + drugName + ' for $' + fmt(total) + '.');
+}
+
+// ══════════════════════════════════════════════
+//  TRAVEL
+// ══════════════════════════════════════════════
+
+function travelTo(district) {
+  if (district === G.district) return;
+  logEvent('Traveled to ' + district + '.');
+  G.district = district;
+  maybeEvent();
+  renderAll();
+}
+
+function maybeEvent() {
+  // ~8% chance of an event on travel
+  if (Math.random() > 0.08) return;
+  const totalWeight = EVENTS.reduce((a,e) => a+e.w, 0);
+  let r = Math.random() * totalWeight;
+  for (const ev of EVENTS) {
+    r -= ev.w;
+    if (r <= 0) {
+      ev.fn();
+      showBanner(ev.msg);
+      logEvent('EVENT: ' + ev.msg);
+      return;
+    }
+  }
+}
+
+function showBanner(msg) {
+  const el = document.getElementById('event-banner');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+
+// ══════════════════════════════════════════════
+//  RANDOM EVENTS
+// ══════════════════════════════════════════════
+
+function evCops() {
+  // Lose 10-40% of a random drug
+  const drugs = Object.keys(G.inventory);
+  if (!drugs.length) return;
+  const drug = drugs[Math.floor(Math.random() * drugs.length)];
+  const pct = 0.10 + Math.random() * 0.30;
+  const lost = Math.max(1, Math.floor(G.inventory[drug] * pct));
+  G.inventory[drug] -= lost;
+  if (G.inventory[drug] <= 0) delete G.inventory[drug];
+}
+
+function evRobbed() {
+  // Lose 5-20% of cash
+  const pct = 0.05 + Math.random() * 0.15;
+  G.cash = Math.max(0, G.cash - Math.floor(G.cash * pct));
+}
+
+function evFound() {
+  // Gain 1-5 units of a cheap drug
+  const cheapDrugs = DRUGS.filter(d => d.max < 2000);
+  const d = cheapDrugs[Math.floor(Math.random() * cheapDrugs.length)];
+  const qty = Math.floor(1 + Math.random() * 5);
+  const space = COAT_SIZE - carrying();
+  const gain = Math.min(qty, space);
+  if (gain > 0) G.inventory[d.name] = (G.inventory[d.name] || 0) + gain;
+}
+
+function evPriceShock() {
+  // Refresh market prices for this city
+  if (G.city) refreshMarket(G.city);
+}
+
+// ══════════════════════════════════════════════
+//  SCORE SAVE
+// ══════════════════════════════════════════════
+
+function saveScore() {
+  if (!G.uid || !G.roundId) return;
+  db.ref('dopewars/scores/' + G.roundId + '/' + G.uid).set({
+    name: G.name,
+    cash: G.cash,
+    ts: Date.now()
+  });
+}
+
+// ══════════════════════════════════════════════
+//  DAILY TOKEN AWARD
+//  Runs on load — checks if UTC midnight passed
+//  since last award was given for today.
+// ══════════════════════════════════════════════
+
+function checkDailyToken() {
+  if (!G.roundId) return;
+  const todayKey = new Date().toISOString().slice(0,10); // "2026-04-10"
+  const awardRef = db.ref('dopewars/awards/' + G.roundId + '/' + todayKey);
+
+  awardRef.transaction(current => {
+    if (current !== null) return; // already awarded today
+    return 'pending'; // mark as in-progress
+  }, (err, committed) => {
+    if (!committed || err) return;
+    // Find today's leader
+    db.ref('dopewars/scores/' + G.roundId).orderByChild('cash').limitToLast(1)
+      .once('value', snap => {
+        const data = snap.val();
+        if (!data) { awardRef.remove(); return; }
+        const uid = Object.keys(data)[0];
+        const winner = data[uid];
+        // Check how many tokens they've already won this round
+        db.ref('dopewars/tokenCount/' + G.roundId + '/' + uid).transaction(count => {
+          if ((count || 0) >= 3) return; // cap hit
+          return (count || 0) + 1;
+        }, (err2, committed2, snap2) => {
+          if (!committed2 || err2) { awardRef.set('no_award'); return; }
+          // Write token to main game
+          db.ref('players/' + uid + '/tokens').transaction(t => (t || 0) + 1);
+          awardRef.set({ winner: winner.name, uid, ts: Date.now() });
+        });
+      });
+  });
+}
+
+// ══════════════════════════════════════════════
+//  CHAT
+// ══════════════════════════════════════════════
+
+function startChat() {
+  const ref = db.ref('dopewars/chat');
+  // Load last 50 messages, then listen for new ones
+  ref.limitToLast(50).on('value', snap => {
+    const log = document.getElementById('chat-log');
+    log.innerHTML = '';
+    snap.forEach(child => {
+      const m = child.val();
+      appendChatLine(m);
+    });
+    log.scrollTop = log.scrollHeight;
+  });
+}
+
+function appendChatLine(m) {
+  const log = document.getElementById('chat-log');
+  const div = document.createElement('div');
+  if (m.sys) {
+    div.innerHTML = '<span class="chat-sys">' + esc(m.msg) + '</span>';
+  } else {
+    const time = m.ts ? new Date(m.ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+    div.innerHTML = '<span style="color:#555;font-size:10px">[' + time + ']</span> ' +
+                    '<span class="chat-name">' + esc(m.name) + ':</span> ' +
+                    esc(m.msg);
+  }
+  log.appendChild(div);
+}
+
+function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg || !G.uid) return;
+  input.value = '';
+  db.ref('dopewars/chat').push({
+    uid: G.uid,
+    name: G.name,
+    msg: msg,
+    ts: Date.now()
+  });
+  // Trim to 200 messages to avoid unbounded growth
+  db.ref('dopewars/chat').orderByKey().once('value', snap => {
+    const keys = Object.keys(snap.val() || {});
+    if (keys.length > 200) {
+      const toDelete = keys.slice(0, keys.length - 200);
+      const updates = {};
+      toDelete.forEach(k => { updates['dopewars/chat/' + k] = null; });
+      db.ref().update(updates);
+    }
+  });
+}
+
+// ══════════════════════════════════════════════
+//  LEADERBOARD
+// ══════════════════════════════════════════════
+
+function loadLeaderboard() {
+  if (!G.roundId) return;
+  db.ref('dopewars/scores/' + G.roundId).orderByChild('cash').limitToLast(50)
+    .once('value', snap => {
+      const rows = [];
+      snap.forEach(child => rows.unshift({ uid: child.key, ...child.val() }));
+      const tbody = document.getElementById('lb-body');
+      tbody.innerHTML = '';
+      rows.forEach((r, i) => {
+        const tr = document.createElement('tr');
+        if (r.uid === G.uid) tr.className = 'lb-you';
+        const d = r.ts ? new Date(r.ts) : null;
+        const timeStr = d ? d.toLocaleDateString() + ' ' + d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '—';
+        tr.innerHTML = '<td>' + (i+1) + '</td><td>' + esc(r.name) + '</td>' +
+                       '<td>$' + fmt(r.cash) + '</td><td>' + timeStr + '</td>';
+        tbody.appendChild(tr);
+      });
+      if (!rows.length) tbody.innerHTML = '<tr><td colspan="4" style="color:#555;text-align:center">No scores yet.</td></tr>';
+    });
+}
+
+// ══════════════════════════════════════════════
+//  RENDERING
+// ══════════════════════════════════════════════
+
+function fmt(n) {
+  return Number(n).toLocaleString();
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function renderAll() {
+  renderTopBar();
+  renderDistricts();
+  renderMarket();
+  renderInventory();
+  renderTravel();
+}
+
+function renderTopBar() {
+  document.getElementById('tb-name').textContent = G.name || '—';
+  document.getElementById('tb-cash').textContent = '$' + fmt(G.cash);
+  document.getElementById('tb-stash').textContent = carrying();
+  document.getElementById('tb-coat').textContent = COAT_SIZE;
+  document.getElementById('tb-city').textContent = G.city || '—';
+  document.getElementById('tb-district').textContent = G.district || '—';
+}
+
+function renderDistricts() {
+  const container = document.getElementById('district-tabs');
+  container.innerHTML = '';
+  const districts = DISTRICTS[G.city] || [];
+  districts.forEach(d => {
+    const btn = document.createElement('div');
+    btn.className = 'district-tab' + (d === G.district ? ' active' : '');
+    btn.textContent = d;
+    btn.onclick = () => travelTo(d);
+    container.appendChild(btn);
+  });
+}
+
+function renderMarket() {
+  document.getElementById('market-district-label').textContent =
+    (G.city || '—') + ' — ' + (G.district || '—');
+  const tbody = document.getElementById('market-body');
+  tbody.innerHTML = '';
+  DRUGS.forEach(d => {
+    const m = marketData[d.name];
+    const basePrice = m ? m.price : null;
+    const mod = districtMod(G.city, G.district, d.name);
+    const price = basePrice ? Math.round(basePrice * mod) : null;
+    const trend = m ? m.trend : 'stable';
+    const trendChar = trend === 'up' ? '↑' : (trend === 'down' ? '↓' : '—');
+    const trendColor = trend === 'up' ? '#cc3300' : (trend === 'down' ? '#336600' : '#555');
+    const have = G.inventory[d.name] || 0;
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td>' + esc(d.name) + '</td>' +
+      '<td>' + (price ? '$' + fmt(price) : '<span style="color:#555">—</span>') + '</td>' +
+      '<td style="color:' + trendColor + '">' + trendChar + '</td>' +
+      '<td>' + (have || '') + '</td>' +
+      '<td><input type="number" id="buy-qty-' + d.name.replace(/ /g,'') + '" min="1" placeholder="qty"></td>' +
+      '<td><button onclick="doBuy(\'' + d.name + '\')" ' + (!price ? 'disabled' : '') + '>Buy</button></td>' +
+      '<td><button onclick="doSell(\'' + d.name + '\')" ' + (!have ? 'disabled' : '') + '>Sell All</button></td>';
+    tbody.appendChild(tr);
+  });
+}
+
+// Fix: drug name to id (strip spaces)
+function doBuy(drugName) {
+  const id = 'buy-qty-' + drugName.replace(/ /g,'');
+  const qtyInput = document.getElementById(id);
+  const qty = parseInt(qtyInput ? qtyInput.value : 0) || 0;
+  if (qty <= 0) return notify('Enter a valid quantity.');
+  const m = marketData[drugName];
+  if (!m) return notify('Drug not available.');
+  const mod = districtMod(G.city, G.district, drugName);
+  const price = Math.round(m.price * mod);
+  const total = price * qty;
+  const space = COAT_SIZE - carrying();
+  if (qty > space) return notify('Not enough room. Max ' + space + ' units.');
+  if (total > G.cash) return notify('Not enough cash.');
+  G.cash -= total;
+  G.inventory[drugName] = (G.inventory[drugName] || 0) + qty;
+  if (qtyInput) qtyInput.value = '';
+  saveScore();
+  renderAll();
+  logEvent('Bought ' + qty + ' ' + drugName + ' @ $' + fmt(price) + ' = $' + fmt(total));
+  notify('Bought ' + qty + ' ' + drugName + ' for $' + fmt(total) + '.');
+}
+
+function renderInventory() {
+  const tbody = document.getElementById('inv-body');
+  tbody.innerHTML = '';
+  const drugs = Object.keys(G.inventory).filter(k => G.inventory[k] > 0);
+  if (!drugs.length) {
+    tbody.innerHTML = '<tr><td colspan="3" style="color:#555">Empty.</td></tr>';
+  } else {
+    drugs.forEach(name => {
+      const qty = G.inventory[name];
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td>' + esc(name) + '</td><td>' + qty + '</td>' +
+        '<td><button onclick="doSell(\'' + name + '\')">Sell All</button></td>';
+      tbody.appendChild(tr);
+    });
+  }
+  document.getElementById('inv-total').textContent = carrying();
+  document.getElementById('inv-max').textContent = COAT_SIZE;
+}
+
+function renderTravel() {
+  const container = document.getElementById('travel-buttons');
+  container.innerHTML = '';
+  const districts = DISTRICTS[G.city] || [];
+  districts.forEach(d => {
+    if (d === G.district) return;
+    const btn = document.createElement('button');
+    btn.textContent = '→ ' + d;
+    btn.style.display = 'block';
+    btn.style.width = '100%';
+    btn.style.marginBottom = '3px';
+    btn.onclick = () => travelTo(d);
+    container.appendChild(btn);
+  });
+  if (!container.children.length) {
+    container.innerHTML = '<span style="color:#555">No other districts.</span>';
+  }
+}
+
+// ══════════════════════════════════════════════
+//  EVENT LOG
+// ══════════════════════════════════════════════
+
+let eventLogOpen = false;
+function toggleEventLog() {
+  eventLogOpen = !eventLogOpen;
+  const panel = document.getElementById('event-log-panel');
+  const link  = document.getElementById('evlog-toggle-link');
+  panel.classList.toggle('open', eventLogOpen);
+  link.textContent = eventLogOpen ? 'Hide Event Log' : 'Show Event Log';
+}
+
+function logEvent(msg) {
+  const log = document.getElementById('event-log');
+  if (!log) return;
+  const time = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  const div = document.createElement('div');
+  div.className = 'ev-entry';
+  div.innerHTML = '<span>[' + time + ']</span> ' + esc(msg);
+  log.insertBefore(div, log.firstChild); // newest at top
+  // Cap at 100 entries
+  while (log.children.length > 100) log.removeChild(log.lastChild);
+}
+
+// ══════════════════════════════════════════════
+//  TAB SWITCHING
+// ══════════════════════════════════════════════
+
+function showTab(name) {
+  document.getElementById('tab-market').style.display = name === 'market' ? '' : 'none';
+  document.getElementById('tab-leaderboard').style.display = name === 'leaderboard' ? '' : 'none';
+  if (name === 'leaderboard') loadLeaderboard();
+}
+
+// ══════════════════════════════════════════════
+//  NOTIFICATION
+// ══════════════════════════════════════════════
+
+let _notifyTimer = null;
+function notify(msg) {
+  const el = document.getElementById('notify-box');
+  el.textContent = msg;
+  el.style.display = 'block';
+  if (_notifyTimer) clearTimeout(_notifyTimer);
+  _notifyTimer = setTimeout(() => { el.style.display = 'none'; }, 3000);
+}
+
+// ══════════════════════════════════════════════
+//  PAGE SWITCHING
+// ══════════════════════════════════════════════
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const el = document.getElementById('page-' + name);
+  if (el) el.classList.add('active');
+}
+
+// ══════════════════════════════════════════════
+//  AUTH — LOGIN / LOGOUT
+// ══════════════════════════════════════════════
+
+function doLogout() {
+  auth.signOut().then(() => { window.location.href = 'idlepimps.html'; });
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  dbg('Auth state resolved. User: ' + (user ? user.uid : 'null'));
+  if (!user) {
+    showPage('login');
+    return;
+  }
+  G.uid = user.uid;
+  dbg('Logged in as UID: ' + user.uid + '. Loading player data...');
+
+  // Load player data from main game to get city and name
+  db.ref('players/' + user.uid).once('value', snap => {
+    const p = snap.val();
+    dbg('Player data: ' + (p ? 'found' : 'NOT FOUND'));
+    if (!p) {
+      document.getElementById('login-err').textContent =
+        'No Pimp City account found. Log in to Pimp City first.';
+      auth.signOut();
+      return;
+    }
+    G.name = p.name || 'Unknown';
+    G.city = resolveCity(p.city);
+    dbg('Name: ' + G.name + ' | City: ' + G.city);
+    const districts = DISTRICTS[G.city] || [];
+    G.district = districts[0] || null;
+
+    db.ref('tick/roundId').once('value', snap2 => {
+      G.roundId = snap2.val() || 1;
+      dbg('Round ID: ' + G.roundId);
+      document.getElementById('lb-round').textContent = G.roundId;
+
+      db.ref('dopewars/scores/' + G.roundId + '/' + G.uid).once('value').then(snap3 => {
+        const score = snap3.val();
+        dbg('Score: ' + JSON.stringify(score));
+        if (score && score.cash != null) G.cash = score.cash;
+
+        dbg('Calling showPage...');
+        showPage('game');
+        dbg('showPage done. Starting services...');
+        try { watchTick(); dbg('watchTick ok'); } catch(e) { dbg('watchTick ERROR: ' + e); }
+        try { ensureMarket(G.city, G.roundId); dbg('ensureMarket ok'); } catch(e) { dbg('ensureMarket ERROR: ' + e); }
+        try { startChat(); dbg('startChat ok'); } catch(e) { dbg('startChat ERROR: ' + e); }
+        try { renderAll(); dbg('renderAll ok'); } catch(e) { dbg('renderAll ERROR: ' + e); }
+        try { checkDailyToken(); } catch(e) { dbg('checkDailyToken ERROR: ' + e); }
+
+        db.ref('dopewars/chat').push({
+          sys: true, name: G.name,
+          msg: G.name + ' entered the game from ' + G.city + '.', ts: Date.now()
+        });
+      }).catch(e => { dbg('Score read FAILED (check Firebase rules): ' + e); });
+    });
+  });
+});
+
+</script>
+</body>
+</html>
