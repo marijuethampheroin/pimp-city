@@ -820,6 +820,7 @@ function sendChat() {
 
 let lbLiveListener = null;
 let lbPlayerCache  = {}; // uid -> { gang }
+let lbTokenCounts  = {}; // uid -> token count for current round
 
 function loadLeaderboard() {
   if (!G.roundId) return;
@@ -845,34 +846,36 @@ function loadLiveStandings() {
   const tbody = document.getElementById('lb-live-body');
   tbody.innerHTML = '<tr><td colspan="5" style="color:#555;text-align:center">Loading...</td></tr>';
 
-  db.ref('dopewars/tokenCount/' + G.roundId).once('value', tokenSnap => {
-    const tokenCounts = tokenSnap.val() || {};
-    lbLiveListener = G.roundId;
-    db.ref('dopewars/scores/' + G.roundId)
-      .on('value', snap => {
-        const rows = [];
-        snap.forEach(child => rows.push({ uid: child.key, ...child.val() }));
-        rows.sort((a, b) => (b.cash || 0) - (a.cash || 0));
-        if (rows.length > 50) rows.splice(50);
-        tbody.innerHTML = '';
-        if (!rows.length) {
-          tbody.innerHTML = '<tr><td colspan="5" style="color:#555;text-align:center">No scores yet this round.</td></tr>';
-          return;
-        }
-        rows.forEach((r, i) => {
-          const tr = document.createElement('tr');
-          if (r.uid === G.uid) tr.className = 'lb-you';
-          const pi = lbPlayerCache[r.uid];
-          const gangCell = (pi && pi.gang) ? esc(pi.gang.name) : '<span style="color:#555">—</span>';
-          const tokens = tokenCounts[r.uid] || 0;
-          tr.innerHTML = '<td>' + (i+1) + '</td>' +
-                         '<td>' + esc(r.name) + '</td>' +
-                         '<td>' + gangCell + '</td>' +
-                         '<td>$' + fmt(r.cash) + '</td>' +
-                         '<td style="text-align:center">' + (tokens || '<span style="color:#555">—</span>') + '</td>';
-          tbody.appendChild(tr);
-        });
-      });
+  // Fetch token counts independently — doesn't block the live listener
+  db.ref('dopewars/tokenCount/' + G.roundId).once('value', snap => {
+    lbTokenCounts = snap.val() || {};
+  });
+
+  // Attach live listener at top level — no nesting
+  lbLiveListener = G.roundId;
+  db.ref('dopewars/scores/' + G.roundId).on('value', snap => {
+    const rows = [];
+    snap.forEach(child => rows.push({ uid: child.key, ...child.val() }));
+    rows.sort((a, b) => (b.cash || 0) - (a.cash || 0));
+    if (rows.length > 50) rows.splice(50);
+    tbody.innerHTML = '';
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="color:#555;text-align:center">No scores yet this round.</td></tr>';
+      return;
+    }
+    rows.forEach((r, i) => {
+      const tr = document.createElement('tr');
+      if (r.uid === G.uid) tr.className = 'lb-you';
+      const pi = lbPlayerCache[r.uid];
+      const gangCell = (pi && pi.gang) ? esc(pi.gang.name) : '<span style="color:#555">—</span>';
+      const tokens = lbTokenCounts[r.uid] || 0;
+      tr.innerHTML = '<td>' + (i+1) + '</td>' +
+                     '<td>' + esc(r.name) + '</td>' +
+                     '<td>' + gangCell + '</td>' +
+                     '<td>$' + fmt(r.cash) + '</td>' +
+                     '<td style="text-align:center">' + (tokens || '<span style="color:#555">—</span>') + '</td>';
+      tbody.appendChild(tr);
+    });
   });
 }
 
