@@ -535,12 +535,7 @@ function updateTickCountdown(lastTick) {
     const m = Math.floor(remaining / 60000);
     const s = Math.floor((remaining % 60000) / 1000);
     const el = document.getElementById('tb-tick');
-    if (el) el.textContent = m + ':' + String(s).padStart(2,'0');
-    // Fire market refresh when countdown hits zero (in case main game isn't open)
-    if (remaining === 0 && !_refreshedAtZero && G.city) {
-      _refreshedAtZero = true;
-      refreshMarket(G.city);
-    }
+    if (el) el.textContent = remaining === 0 ? 'Awaiting...' : m + ':' + String(s).padStart(2,'0');
   }, 1000);
 }
 
@@ -665,6 +660,7 @@ function saveScore() {
   db.ref('dopewars/scores/' + G.roundId + '/' + G.uid).set({
     name: G.name,
     cash: G.cash,
+    inventory: G.inventory || {},
     ts: Date.now()
   });
 }
@@ -1098,6 +1094,7 @@ auth.onAuthStateChanged(user => {
         const score = snap3.val();
         dbg('Score: ' + JSON.stringify(score));
         if (score && score.cash != null) G.cash = score.cash;
+        if (score && score.inventory) G.inventory = score.inventory;
 
         dbg('Calling showPage...');
         showPage('game');
