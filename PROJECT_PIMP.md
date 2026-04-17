@@ -604,5 +604,18 @@ The three documents together cover everything needed to resume without re-explai
   - `FAQ_SYNTHESIS.md` — all confirmed mechanics from source research with source citations
   - Working directory corrected throughout all docs: `pimp_city\` not `idlepimps\project pimp\`
 
+### v0.12 — Alt Color Scheme (April 17, 2026)
+- **Alt color scheme added:** checkbox in Pimp Preferences replaces the old Pimp Name
+  field. Toggling "Alt Scheme (Purple & Green)" switches green UI elements to purple
+  (`#336600` → `#660066`) and yellow elements to green (`#ffcc00`/`#ffcc33` → `#00cc33`/`#33cc00`).
+- **CSS variables:** both `idlepimps.html` and `dopewars.html` now use `:root` CSS custom
+  properties (`--clr-green`, `--clr-yellow`, `--clr-yellow2`) throughout their stylesheets.
+  `body.alt-theme` overrides those variables. Inline-styled elements covered by targeted
+  `body.alt-theme [style*="..."]` attribute selectors.
+- **Persisted to Firebase:** `G.altTheme` (boolean) saved via `saveGame()`. Applied on
+  login in both files via `document.body.classList.toggle('alt-theme', !!G.altTheme)`.
+- **dopewars.html:** reads `p.altTheme` from the player Firebase record on auth load
+  alongside `p.name` and `p.city`.
+
 ---
 *End of document.*
