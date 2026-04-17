@@ -1,6 +1,6 @@
 # Project Pimp — Master Document
 > README + Changelog + Handoff in one file.
-> Last updated: April 10, 2026.
+> Last updated: April 17, 2026.
 
 ---
 
@@ -229,6 +229,13 @@ pimp-city-default-rtdb/
 │       ├── name, dues, leaderId
 │       └── members: { {uid}: true }
 │
+├── gang_invites/
+│   └── {toUid}/
+│       └── {pushId}/
+│           ├── fromUid, fromName
+│           ├── gangName, gangId, gangDues
+│           └── ts
+│
 ├── hall_of_fame/
 │   └── {pushId}/
 │       ├── name, id, nw, ts, roundId
@@ -260,7 +267,7 @@ dopewars/
         └── {uid}: number              ← how many tokens this player has won this round (cap: 3)
 ```
 
-### Firebase Rules (production — applied March 28, 2026)
+### Firebase Rules (production — updated April 17, 2026)
 ```json
 {
   "rules": {
@@ -276,6 +283,12 @@ dopewars/
       ".indexOn": ["toUid", "fromUid"]
     },
     "gangs": { ".read": "auth != null", ".write": "auth != null" },
+    "gang_invites": {
+      "$uid": {
+        ".read": "auth.uid === $uid",
+        ".write": "auth != null"
+      }
+    },
     "presence": {
       "$uid": { ".read": "auth != null", ".write": "auth.uid === $uid" }
     },
@@ -427,6 +440,86 @@ dopewars/
   (not `1`) so they always hit the activation screen on first login regardless of
   current `tick/roundId`.
 
+### v0.11 — FAQ Overhaul + Documentation Sprint (April 9, 2026)
+- **FAQ completely rewritten:** replaced thin 7-section cheat sheet with comprehensive
+  guide covering Beginner's Guide, Hoe Happiness, Thug Happiness, Net Worth, Payout,
+  Stealing Hoes & Crackulator, Attacks, Ganking, Cities, Turns & Tokens, Gangs, Casino,
+  Produce Crack, The Drop sequence, Advanced NW Management, Rounds, and Glossary (13 terms).
+- **Mechanics research completed:** all FAQ files read and synthesized. Crackulator formula
+  verified to the decimal against live Pimpageddon data. NW values, IdleMart prices, city
+  travel costs, and supply mechanics all confirmed from live HTML snapshots.
+- **Weed/beer confirmed never consumed:** both are permanent NW-invisible wealth storage
+  in Pimpageddon. Removed from bug list.
+- **Kevlar Vest NW confirmed $0:** was $3,000 in original IdlePimps, explicitly $0 in
+  Pimpageddon. Vest combat bonus confirmed but not yet wired into doAttack().
+- **AK-47 and Vest combat roles documented:** AKs mandatory, Vests give defensive bonus.
+- **Three new documentation files created:**
+  - `ROADMAP.md` — product state, backlog (3 priority tiers), open design decisions,
+    decided decisions log, "done" definition, session workflow
+  - `FAQ_SYNTHESIS.md` — all confirmed mechanics from source research with source citations
+  - Working directory corrected throughout all docs: `pimp_city\` not `idlepimps\project pimp\`
+
+### v0.12 — Dope Wars Side-Game (April 10, 2026)
+- **New file: `dopewars.html`** — standalone Dope Wars side-game served alongside the main game.
+  Classic buy-low/sell-high loop. 11 drugs, 5 districts per city, 100-unit coat limit.
+- **City-aware districts:** reads `players/{uid}/city` on load and sets the player in the
+  matching city's 5 real-world districts. City values are normalized via `CITY_MAP` (handles
+  abbreviated values like `"nyc"` stored in Firebase).
+- **Shared market prices:** stored in `dopewars/market/{city}/`, shared across all players in
+  a city. Prices regenerate on the same tick as the main game (`tick/lastTickTime`), with
+  deterministic per-district modifiers (±10%, sin-seeded) so prices vary slightly between
+  districts each session.
+- **Random travel events:** cops (lose stash), robbery (lose cash), found drugs, price shock.
+  8% chance per travel move.
+- **Collapsible event log:** local-only log in the chat panel showing buys, sells, travel
+  moves, and random events with timestamps. Toggle via "Show/Hide Event Log" link.
+- **Live global chat:** `dopewars/chat` node, last 50 messages, auto-trimmed to 200 total.
+  Join message posted on login.
+- **Daily leaderboard + token awards:** scores saved to `dopewars/scores/{roundId}/{uid}`.
+  UTC-midnight daily check awards 1 token to the current top player via Firebase transaction,
+  written directly to `players/{uid}/tokens`. Max 3 tokens per player per round tracked in
+  `dopewars/tokenCount/{roundId}/{uid}`.
+- **Auth:** uses the same Firebase Auth session as the main game. No separate login. If not
+  logged in, shows a redirect to `idlepimps.html`.
+- **Nav link:** "Dope Wars" link added to the bottom of the left column in `idlepimps.html`
+  main menu, below the stats block. Opens in a new tab.
+- **Firebase rules updated:** added `dopewars` subtree to rules (market public read,
+  scores public read, chat/awards/tokenCount auth-required read/write).
+
+### v0.13 — Alt Color Scheme (April 17, 2026)
+- **Alt color scheme added:** checkbox in Pimp Preferences replaces the old Pimp Name
+  field. Toggling "Alt Scheme (Purple & Green)" switches green UI elements to purple
+  (`#336600` → `#660066`) and yellow elements to green (`#ffcc00`/`#ffcc33` → `#00cc33`/`#33cc00`).
+- **CSS variables:** both `idlepimps.html` and `dopewars.html` now use `:root` CSS custom
+  properties (`--clr-green`, `--clr-yellow`, `--clr-yellow2`) throughout their stylesheets.
+  `body.alt-theme` overrides those variables. Inline-styled elements covered by targeted
+  `body.alt-theme [style*="..."]` attribute selectors.
+- **Persisted to Firebase:** `G.altTheme` (boolean) saved via `saveGame()`. Applied on
+  login in both files via `document.body.classList.toggle('alt-theme', !!G.altTheme)`.
+- **dopewars.html:** reads `p.altTheme` from the player Firebase record on auth load
+  alongside `p.name` and `p.city`.
+
+
+### v0.14 — Gang Rankings + Gang Invite System (April 17, 2026)
+- **Gang Rankings page fully implemented:** replaced stub (which only showed the current
+  player's own gang) with real aggregation logic. Reads from `cachedPlayers` (already loaded
+  for other rankings), groups players by `gang.id`, sums member NW, sorts descending.
+  Rank colors, font styling, and row highlight for the player's own gang match the other
+  ranking tables. Member count shown per gang.
+- **`invitePimp()` implemented:** leader enters a target's pimp ID number; function looks
+  up the target in `cachedPlayers`, checks they're not already in a gang, and writes an
+  invite object to `gang_invites/{targetUid}` in Firebase. Includes gangName, gangId,
+  gangDues, fromName, fromUid, and timestamp.
+- **`acceptInvite()` / `declineInvite()`:** accept sets `G.gang` (isLeader: false),
+  removes invite from Firebase, saves. Decline just removes the invite node.
+- **`loadGangInvites(containerId)`:** reads `gang_invites/{currentUser.uid}`, renders
+  Accept/Decline links into any container element passed by ID. Reusable across pages.
+- **Gang Menu — Pending Invitations section:** shown only when player has no gang.
+  Appears below the Create/Join forms. Loads live from Firebase on every gang menu open.
+- **Console — Gang Invitations panel:** added below the Gang Capacity line in the first
+  console column. Shows pending invites if not in a gang; shows "N/A" if already in one.
+- **Firebase rules updated:** added `gang_invites/$uid` node — players can only read their
+  own invites (`auth.uid === $uid`), any authenticated user can write (so leaders can invite).
 
 ---
 
@@ -490,8 +583,8 @@ new features.
 - Comfortable with technical detail, prefers plain explanations
 - Do not use Desktop Commander without confirming first (unless already in a working session)
 
-### Current File Sizes (April 10, 2026)
-- `idlepimps.html` — ~3,959 lines
+### Current File Sizes (April 17, 2026)
+- `idlepimps.html` — ~4,053 lines
 - `admin.html` — ~730 lines
 - `dopewars.html` — ~1,010 lines
 
@@ -557,65 +650,6 @@ The three documents together cover everything needed to resume without re-explai
 - `PROJECT_PIMP.md` — architecture, Firebase, code map (this file)
 - `ROADMAP.md` — what's built, what's broken, what's next, design decisions
 - `FAQ_SYNTHESIS.md` — all confirmed game mechanics verified against live source material
-
-### v0.12 — Dope Wars Side-Game (April 10, 2026)
-- **New file: `dopewars.html`** — standalone Dope Wars side-game served alongside the main game.
-  Classic buy-low/sell-high loop. 11 drugs, 5 districts per city, 100-unit coat limit.
-- **City-aware districts:** reads `players/{uid}/city` on load and sets the player in the
-  matching city's 5 real-world districts. City values are normalized via `CITY_MAP` (handles
-  abbreviated values like `"nyc"` stored in Firebase).
-- **Shared market prices:** stored in `dopewars/market/{city}/`, shared across all players in
-  a city. Prices regenerate on the same tick as the main game (`tick/lastTickTime`), with
-  deterministic per-district modifiers (±10%, sin-seeded) so prices vary slightly between
-  districts each session.
-- **Random travel events:** cops (lose stash), robbery (lose cash), found drugs, price shock.
-  8% chance per travel move.
-- **Collapsible event log:** local-only log in the chat panel showing buys, sells, travel
-  moves, and random events with timestamps. Toggle via "Show/Hide Event Log" link.
-- **Live global chat:** `dopewars/chat` node, last 50 messages, auto-trimmed to 200 total.
-  Join message posted on login.
-- **Daily leaderboard + token awards:** scores saved to `dopewars/scores/{roundId}/{uid}`.
-  UTC-midnight daily check awards 1 token to the current top player via Firebase transaction,
-  written directly to `players/{uid}/tokens`. Max 3 tokens per player per round tracked in
-  `dopewars/tokenCount/{roundId}/{uid}`.
-- **Auth:** uses the same Firebase Auth session as the main game. No separate login. If not
-  logged in, shows a redirect to `idlepimps.html`.
-- **Nav link:** "Dope Wars" link added to the bottom of the left column in `idlepimps.html`
-  main menu, below the stats block. Opens in a new tab.
-- **Firebase rules updated:** added `dopewars` subtree to rules (market public read,
-  scores public read, chat/awards/tokenCount auth-required read/write).
-
-### v0.11 — FAQ Overhaul + Documentation Sprint (April 9, 2026)
-- **FAQ completely rewritten:** replaced thin 7-section cheat sheet with comprehensive
-  guide covering Beginner's Guide, Hoe Happiness, Thug Happiness, Net Worth, Payout,
-  Stealing Hoes & Crackulator, Attacks, Ganking, Cities, Turns & Tokens, Gangs, Casino,
-  Produce Crack, The Drop sequence, Advanced NW Management, Rounds, and Glossary (13 terms).
-- **Mechanics research completed:** all FAQ files read and synthesized. Crackulator formula
-  verified to the decimal against live Pimpageddon data. NW values, IdleMart prices, city
-  travel costs, and supply mechanics all confirmed from live HTML snapshots.
-- **Weed/beer confirmed never consumed:** both are permanent NW-invisible wealth storage
-  in Pimpageddon. Removed from bug list.
-- **Kevlar Vest NW confirmed $0:** was $3,000 in original IdlePimps, explicitly $0 in
-  Pimpageddon. Vest combat bonus confirmed but not yet wired into doAttack().
-- **AK-47 and Vest combat roles documented:** AKs mandatory, Vests give defensive bonus.
-- **Three new documentation files created:**
-  - `ROADMAP.md` — product state, backlog (3 priority tiers), open design decisions,
-    decided decisions log, "done" definition, session workflow
-  - `FAQ_SYNTHESIS.md` — all confirmed mechanics from source research with source citations
-  - Working directory corrected throughout all docs: `pimp_city\` not `idlepimps\project pimp\`
-
-### v0.12 — Alt Color Scheme (April 17, 2026)
-- **Alt color scheme added:** checkbox in Pimp Preferences replaces the old Pimp Name
-  field. Toggling "Alt Scheme (Purple & Green)" switches green UI elements to purple
-  (`#336600` → `#660066`) and yellow elements to green (`#ffcc00`/`#ffcc33` → `#00cc33`/`#33cc00`).
-- **CSS variables:** both `idlepimps.html` and `dopewars.html` now use `:root` CSS custom
-  properties (`--clr-green`, `--clr-yellow`, `--clr-yellow2`) throughout their stylesheets.
-  `body.alt-theme` overrides those variables. Inline-styled elements covered by targeted
-  `body.alt-theme [style*="..."]` attribute selectors.
-- **Persisted to Firebase:** `G.altTheme` (boolean) saved via `saveGame()`. Applied on
-  login in both files via `document.body.classList.toggle('alt-theme', !!G.altTheme)`.
-- **dopewars.html:** reads `p.altTheme` from the player Firebase record on auth load
-  alongside `p.name` and `p.city`.
 
 ---
 *End of document.*
