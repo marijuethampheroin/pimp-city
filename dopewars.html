@@ -848,10 +848,12 @@ function loadLiveStandings() {
   db.ref('dopewars/tokenCount/' + G.roundId).once('value', tokenSnap => {
     const tokenCounts = tokenSnap.val() || {};
     lbLiveListener = G.roundId;
-    db.ref('dopewars/scores/' + G.roundId).orderByChild('cash').limitToLast(50)
+    db.ref('dopewars/scores/' + G.roundId)
       .on('value', snap => {
         const rows = [];
-        snap.forEach(child => rows.unshift({ uid: child.key, ...child.val() }));
+        snap.forEach(child => rows.push({ uid: child.key, ...child.val() }));
+        rows.sort((a, b) => (b.cash || 0) - (a.cash || 0));
+        if (rows.length > 50) rows.splice(50);
         tbody.innerHTML = '';
         if (!rows.length) {
           tbody.innerHTML = '<tr><td colspan="5" style="color:#555;text-align:center">No scores yet this round.</td></tr>';
