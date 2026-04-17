@@ -116,7 +116,7 @@ tr:nth-child(even) td { background: #0a0a0a; }
 
 /* ── Chat ── */
 #chat-log {
-  background: #050505;
+  background: #050505 url('bricktile.jpg') repeat;
   border: 1px solid #222;
   height: 260px;
   overflow-y: auto;
@@ -181,9 +181,18 @@ tr:nth-child(even) td { background: #0a0a0a; }
 /* ── Leaderboard highlight ── */
 .lb-you { background: #0d1a00 !important; color: #FFCC33; font-weight: bold; }
 
-/* ── Event log ── */
-#event-log-panel { flex: 0 0 220px; display: none; }
-#event-log-panel.open { display: block; }
+/* ── Chat / Event log panels ── */
+#chat-panel    { flex: 1; min-width: 0; }
+#chat-panel .subpanel-body    { display: block; }
+#chat-panel.closed .subpanel-body { display: none; }
+#event-log-panel { flex: 1; min-width: 0; }
+#event-log-panel .subpanel-body { display: none; }
+#event-log-panel.open .subpanel-body { display: block; }
+.subpanel-hdr {
+  color: #555; font-size: 10px; margin-bottom: 3px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid #1a1a00; padding-bottom: 2px;
+}
 #event-log {
   background: #050505;
   border: 1px solid #222;
@@ -208,7 +217,8 @@ tr:nth-child(even) td { background: #0a0a0a; }
   align-items: center;
 }
 #chat-toggle:hover { color: #FFCC33; background: #1a3300; }
-.chat-row { display: flex; gap: 4px; }
+.chat-row { display: flex; gap: 8px; }
+#market-panel { background: #000 url('bricktile.jpg') repeat; }
 </style>
 </head>
 <body>
@@ -261,13 +271,13 @@ tr:nth-child(even) td { background: #0a0a0a; }
           <!-- District tabs -->
           <div class="district-tabs" id="district-tabs"></div>
           <!-- Market table -->
-          <div class="panel">
+          <div class="panel" id="market-panel">
             <div class="panel-title"><span id="market-district-label">—</span></div>
             <table id="market-table">
               <thead>
                 <tr>
                   <th>Drug</th><th>Price</th><th>Trend</th>
-                  <th>You Have</th><th>Buy Qty</th><th></th><th></th>
+                  <th>Have</th><th>Buy</th><th>Sell</th>
                 </tr>
               </thead>
               <tbody id="market-body"></tbody>
@@ -295,24 +305,30 @@ tr:nth-child(even) td { background: #0a0a0a; }
       </div>
       <!-- Chat + Event Log -->
       <div class="panel">
-        <div class="panel-title">
-          CHAT
-          <span style="float:right;font-weight:normal;font-size:11px">
-            <a href="#" onclick="toggleEventLog();return false;" id="evlog-toggle-link">Show Event Log</a>
-          </span>
-        </div>
+        <div class="panel-title">CHAT &amp; EVENTS</div>
         <div class="chat-row">
-          <div style="flex:1">
-            <div id="chat-log"></div>
-            <div id="chat-input-row">
-              <input type="text" id="chat-input" placeholder="Say something..." maxlength="200"
-                onkeydown="if(event.key==='Enter')sendChat()">
-              <button onclick="sendChat()">Send</button>
+          <div id="chat-panel">
+            <div class="subpanel-hdr">
+              <span>CHAT</span>
+              <a href="#" onclick="toggleChat();return false;" id="chat-toggle-link">Hide</a>
+            </div>
+            <div class="subpanel-body">
+              <div id="chat-log"></div>
+              <div id="chat-input-row">
+                <input type="text" id="chat-input" placeholder="Say something..." maxlength="200"
+                  onkeydown="if(event.key==='Enter')sendChat()">
+                <button onclick="sendChat()">Send</button>
+              </div>
             </div>
           </div>
-          <div id="event-log-panel">
-            <div style="color:#555;font-size:10px;margin-bottom:3px;text-align:center">EVENT LOG</div>
-            <div id="event-log"></div>
+          <div id="event-log-panel" class="open">
+            <div class="subpanel-hdr">
+              <span>EVENTS</span>
+              <a href="#" onclick="toggleEventLog();return false;" id="evlog-toggle-link">Hide</a>
+            </div>
+            <div class="subpanel-body">
+              <div id="event-log"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -370,10 +386,7 @@ const firebaseConfig = {
   messagingSenderId: "41670433277",
   appId: "1:41670433277:web:945aa16d820c6ef30ce194"
 };
-function dbg(msg) {
-  const el = document.getElementById('debug-status');
-  if (el) el.innerHTML += '<br>' + msg;
-}
+function dbg(msg) { /* debug disabled */ }
 
 firebase.initializeApp(firebaseConfig);
 dbg('Firebase initialized.');
@@ -562,21 +575,43 @@ function doSell(drugName) {
   notify('Sold ' + qty + ' ' + drugName + ' for $' + fmt(total) + '.');
 }
 
+function doBuyMax(drugName) {
+  const m = marketData[drugName];
+  if (!m) return notify('Drug not available.');
+  const mod = districtMod(G.city, G.district, drugName);
+  const price = Math.round(m.price * mod);
+  if (!price) return notify('Drug not available.');
+  const space = COAT_SIZE - carrying();
+  const canAfford = Math.floor(G.cash / price);
+  const qty = Math.min(space, canAfford);
+  if (qty <= 0) return notify('Not enough cash or coat space.');
+  G.cash -= price * qty;
+  G.inventory[drugName] = (G.inventory[drugName] || 0) + qty;
+  saveScore();
+  renderAll();
+  logEvent('Bought ' + qty + ' ' + drugName + ' @ $' + fmt(price) + ' = $' + fmt(price * qty));
+  notify('Bought ' + qty + ' ' + drugName + ' for $' + fmt(price * qty) + '.');
+}
+
 function doSellQty(drugName) {
-  const qtyInput = document.getElementById('buy-qty-' + drugName);
-  const qty = parseInt(qtyInput.value) || 0;
+  const safeId = drugName.replace(/ /g,'');
+  const qtyInput = document.getElementById('sell-qty-' + safeId);
+  const qty = parseInt(qtyInput ? qtyInput.value : 0) || 0;
   if (qty <= 0) return notify('Enter a valid quantity.');
   const have = G.inventory[drugName] || 0;
   if (qty > have) return notify('You only have ' + have + '.');
-  const price = marketData[drugName] && marketData[drugName].price;
-  if (!price) return notify('No market for that here.');
+  const m = marketData[drugName];
+  if (!m) return notify('No market for that here.');
+  const mod = districtMod(G.city, G.district, drugName);
+  const price = Math.round(m.price * mod);
   const total = price * qty;
   G.cash += total;
   G.inventory[drugName] -= qty;
   if (G.inventory[drugName] <= 0) delete G.inventory[drugName];
-  qtyInput.value = '';
+  if (qtyInput) qtyInput.value = '';
   saveScore();
   renderAll();
+  logEvent('Sold ' + qty + ' ' + drugName + ' @ $' + fmt(price) + ' = $' + fmt(total));
   notify('Sold ' + qty + ' ' + drugName + ' for $' + fmt(total) + '.');
 }
 
@@ -915,15 +950,23 @@ function renderMarket() {
     const trendChar = trend === 'up' ? '↑' : (trend === 'down' ? '↓' : '—');
     const trendColor = trend === 'up' ? '#cc3300' : (trend === 'down' ? '#336600' : '#555');
     const have = G.inventory[d.name] || 0;
+    const safeId = d.name.replace(/ /g,'');
     const tr = document.createElement('tr');
     tr.innerHTML =
       '<td>' + esc(d.name) + '</td>' +
       '<td>' + (price ? '$' + fmt(price) : '<span style="color:#555">—</span>') + '</td>' +
       '<td style="color:' + trendColor + '">' + trendChar + '</td>' +
       '<td>' + (have || '') + '</td>' +
-      '<td><input type="number" id="buy-qty-' + d.name.replace(/ /g,'') + '" min="1" placeholder="qty"></td>' +
-      '<td><button onclick="doBuy(\'' + d.name + '\')" ' + (!price ? 'disabled' : '') + '>Buy</button></td>' +
-      '<td><button onclick="doSell(\'' + d.name + '\')" ' + (!have ? 'disabled' : '') + '>Sell All</button></td>';
+      '<td style="white-space:nowrap">' +
+        '<input type="number" id="buy-qty-' + safeId + '" min="1" placeholder="qty" style="width:52px"> ' +
+        '<button onclick="doBuy(\'' + d.name + '\')" ' + (!price ? 'disabled' : '') + '>Buy</button> ' +
+        '<button onclick="doBuyMax(\'' + d.name + '\')" ' + (!price ? 'disabled' : '') + '>Max</button>' +
+      '</td>' +
+      '<td style="white-space:nowrap">' +
+        '<input type="number" id="sell-qty-' + safeId + '" min="1" placeholder="qty" style="width:52px"> ' +
+        '<button onclick="doSellQty(\'' + d.name + '\')" ' + (!have ? 'disabled' : '') + '>Sell</button> ' +
+        '<button onclick="doSell(\'' + d.name + '\')" ' + (!have ? 'disabled' : '') + '>All</button>' +
+      '</td>';
     tbody.appendChild(tr);
   });
 }
@@ -993,13 +1036,22 @@ function renderTravel() {
 //  EVENT LOG
 // ══════════════════════════════════════════════
 
-let eventLogOpen = false;
+let eventLogOpen = true;
+let chatOpen = true;
 function toggleEventLog() {
   eventLogOpen = !eventLogOpen;
   const panel = document.getElementById('event-log-panel');
   const link  = document.getElementById('evlog-toggle-link');
   panel.classList.toggle('open', eventLogOpen);
-  link.textContent = eventLogOpen ? 'Hide Event Log' : 'Show Event Log';
+  link.textContent = eventLogOpen ? 'Hide' : 'Show';
+}
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  const panel = document.getElementById('chat-panel');
+  const link  = document.getElementById('chat-toggle-link');
+  panel.classList.toggle('closed', !chatOpen);
+  link.textContent = chatOpen ? 'Hide' : 'Show';
 }
 
 function logEvent(msg) {
