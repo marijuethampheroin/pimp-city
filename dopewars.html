@@ -320,8 +320,10 @@ tr:nth-child(even) td { background: #0a0a0a; }
 
     <!-- Tab: Leaderboard -->
     <div id="tab-leaderboard" style="display:none">
+
+      <!-- Current round -->
       <div class="panel">
-        <div class="panel-title">LEADERBOARD — ROUND <span id="lb-round">—</span></div>
+        <div class="panel-title">CURRENT ROUND — ROUND <span id="lb-round">—</span></div>
         <p style="margin-bottom:6px;color:#888;font-size:11px">
           Top player at UTC midnight each day earns 1 token in Pimp City (max 3/round).
         </p>
@@ -330,6 +332,25 @@ tr:nth-child(even) td { background: #0a0a0a; }
           <tbody id="lb-body"></tbody>
         </table>
       </div>
+
+      <!-- Past round winners -->
+      <div class="panel">
+        <div class="panel-title">PAST ROUND WINNERS</div>
+        <table>
+          <thead><tr><th>Round</th><th>Pimp</th><th>Final Cash</th></tr></thead>
+          <tbody id="lb-past-body"></tbody>
+        </table>
+      </div>
+
+      <!-- Daily token winners -->
+      <div class="panel">
+        <div class="panel-title">DAILY TOKEN WINNERS</div>
+        <table>
+          <thead><tr><th>Round</th><th>Date</th><th>Pimp</th></tr></thead>
+          <tbody id="lb-tokens-body"></tbody>
+        </table>
+      </div>
+
       <div style="margin-top:6px"><a href="#" onclick="showTab('market');return false;">← Back to Market</a></div>
     </div>
 
@@ -393,7 +414,8 @@ const CITY_MAP = {
   'london':    'London',
   'atlanta':   'Atlanta',
   'las vegas': 'Las Vegas',
-  'lasvegas':  'Las Vegas'
+  'lasvegas':  'Las Vegas',
+  'vegas':     'Las Vegas'
 };
 
 function resolveCity(raw) {
@@ -745,6 +767,12 @@ function sendChat() {
 
 function loadLeaderboard() {
   if (!G.roundId) return;
+  loadCurrentRound();
+  loadPastRoundWinners();
+  loadDailyTokenWinners();
+}
+
+function loadCurrentRound() {
   db.ref('dopewars/scores/' + G.roundId).orderByChild('cash').limitToLast(50)
     .once('value', snap => {
       const rows = [];
@@ -760,8 +788,80 @@ function loadLeaderboard() {
                        '<td>$' + fmt(r.cash) + '</td><td>' + timeStr + '</td>';
         tbody.appendChild(tr);
       });
-      if (!rows.length) tbody.innerHTML = '<tr><td colspan="4" style="color:#555;text-align:center">No scores yet.</td></tr>';
+      if (!rows.length) tbody.innerHTML = '<tr><td colspan="4" style="color:#555;text-align:center">No scores yet this round.</td></tr>';
     });
+}
+
+function loadPastRoundWinners() {
+  const tbody = document.getElementById('lb-past-body');
+  tbody.innerHTML = '<tr><td colspan="3" style="color:#555">Loading...</td></tr>';
+  if (G.roundId <= 1) {
+    tbody.innerHTML = '<tr><td colspan="3" style="color:#555">No past rounds yet.</td></tr>';
+    return;
+  }
+  const promises = [];
+  for (let r = G.roundId - 1; r >= 1; r--) {
+    promises.push(
+      db.ref('dopewars/scores/' + r).orderByChild('cash').limitToLast(1).once('value')
+        .then(snap => {
+          let winner = null;
+          snap.forEach(child => { winner = { uid: child.key, round: r, ...child.val() }; });
+          return winner;
+        })
+    );
+  }
+  Promise.all(promises).then(results => {
+    tbody.innerHTML = '';
+    const winners = results.filter(Boolean);
+    if (!winners.length) {
+      tbody.innerHTML = '<tr><td colspan="3" style="color:#555">No data.</td></tr>';
+      return;
+    }
+    winners.forEach(w => {
+      const tr = document.createElement('tr');
+      if (w.uid === G.uid) tr.className = 'lb-you';
+      tr.innerHTML = '<td>' + w.round + '</td><td>' + esc(w.name) + '</td>' +
+                     '<td>$' + fmt(w.cash) + '</td>';
+      tbody.appendChild(tr);
+    });
+  });
+}
+
+function loadDailyTokenWinners() {
+  const tbody = document.getElementById('lb-tokens-body');
+  tbody.innerHTML = '<tr><td colspan="3" style="color:#555">Loading...</td></tr>';
+  // Load awards for all rounds up to current
+  const promises = [];
+  for (let r = G.roundId; r >= 1; r--) {
+    promises.push(
+      db.ref('dopewars/awards/' + r).once('value')
+        .then(snap => {
+          const entries = [];
+          snap.forEach(child => {
+            const v = child.val();
+            if (v && v.winner) entries.push({ round: r, date: child.key, name: v.winner, uid: v.uid });
+          });
+          return entries;
+        })
+    );
+  }
+  Promise.all(promises).then(results => {
+    tbody.innerHTML = '';
+    const all = results.flat().sort((a, b) => {
+      if (b.round !== a.round) return b.round - a.round;
+      return b.date > a.date ? 1 : -1;
+    });
+    if (!all.length) {
+      tbody.innerHTML = '<tr><td colspan="3" style="color:#555">No token awards yet.</td></tr>';
+      return;
+    }
+    all.forEach(a => {
+      const tr = document.createElement('tr');
+      if (a.uid === G.uid) tr.className = 'lb-you';
+      tr.innerHTML = '<td>' + a.round + '</td><td>' + esc(a.date) + '</td><td>' + esc(a.name) + '</td>';
+      tbody.appendChild(tr);
+    });
+  });
 }
 
 // ══════════════════════════════════════════════
