@@ -975,6 +975,8 @@ body.alt-theme #rh-select { border-color: var(--clr-green) !important; }
           <div class="console-panel-header">Online Gang Members</div>
           <div class="console-panel-body" id="console-gang-members"></div>
           <div class="console-panel-header" style="margin-top:2px;">Gang Capacity: <span id="console-gang-cap">0 of 0</span></div>
+          <div class="console-panel-header" style="margin-top:2px;">Gang Invitations</div>
+          <div class="console-panel-body" id="console-gang-invites"></div>
         </div>
         <div class="console-panel">
           <div class="console-panel-header">Gang MOTD</div>
@@ -1845,16 +1847,37 @@ function loadAndRenderRankings() {
       }
     }
 
-    // Gang rankings (stub for now)
+    // Gang rankings — aggregate from all players
     const gtb = document.getElementById('gang-rank-tbody');
     if (gtb) {
       gtb.innerHTML = '';
-      if (G.gang) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>1</td><td>${G.gang.name}</td><td>1</td><td>$${fmt(nw)}</td>`;
-        gtb.appendChild(tr);
+      const gangMap = {};
+      allPimps.forEach(p => {
+        if (!p.gang) return;
+        const key = p.gang.id || p.gang.name;
+        if (!gangMap[key]) gangMap[key] = { name: p.gang.name, members: 0, nw: 0 };
+        gangMap[key].members++;
+        gangMap[key].nw += getNetWorth(p);
+      });
+      const gangs = Object.values(gangMap).sort((a, b) => b.nw - a.nw);
+      if (gangs.length === 0) {
+        gtb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ccc;font-family:Verdana;font-size:11px;">No gangs formed yet.</td></tr>';
       } else {
-        gtb.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#ccc;">No gangs formed yet.</td></tr>';
+        gangs.forEach((g, i) => {
+          const rank = i + 1;
+          const rankColor = (rank <= 3 || rank % 10 === 0) ? '#CC0033' : '#FFFFFF';
+          const myGangKey = G.gang ? String(G.gang.id || G.gang.name) : null;
+          const thisKey = String(Object.keys(gangMap).find(k => gangMap[k] === g) || '');
+          const bg = myGangKey && myGangKey === thisKey ? '#1a3300' : '';
+          const tr = document.createElement('tr');
+          tr.style.background = bg;
+          tr.innerHTML = `
+            <td align="center"><font color="${rankColor}" size="1" face="VERDANA"><b>${rank}</b></font></td>
+            <td align="left"><font color="#FFCC66" size="1" face="VERDANA"><b>${g.name}</b></font></td>
+            <td align="center"><font color="#FFFFFF" size="1" face="VERDANA"><b>${g.members}</b></font></td>
+            <td align="right"><font color="#CC0033" size="1" face="VERDANA"><b>$${fmt(g.nw)}</b></font></td>`;
+          gtb.appendChild(tr);
+        });
       }
     }
   });
@@ -2641,7 +2664,10 @@ function updateGangMenu() {
           Gang ID: <input type="text" id="gang-join-input" size="10">
           <button class="btn" onclick="joinGang()">Join Gang</button>
         </div>
-      </div>`;
+      </div>
+      <div style="font-family:Verdana; font-size:11px; color:#ffcc66; font-weight:bold; margin:6px 0 3px 0;">Pending Invitations</div>
+      <div id="gang-invites-menu"></div>`;
+    loadGangInvites('gang-invites-menu');
 
   } else if (G.gang.isLeader) {
     // ── Leader view ──
@@ -2784,7 +2810,60 @@ function disbandGang() {
 }
 
 function invitePimp() {
-  notify('Invite sent. (Multiplayer feature — requires other players online.)');
+  if (!G.gang || !G.gang.isLeader) return;
+  const input = (document.getElementById('gang-invite-input').value || '').trim();
+  if (!input) { notify('Enter a pimp ID to invite.'); return; }
+  const target = cachedPlayers.find(p => String(p.id) === String(input) && !p.isPlayer);
+  if (!target) { notify('Pimp #' + input + ' not found. Check Rankings.'); return; }
+  if (target.gang) { notify(target.name + ' is already in a gang.'); return; }
+  db.ref('gang_invites/' + target.uid).push({
+    fromUid: currentUser.uid,
+    fromName: G.name,
+    gangName: G.gang.name,
+    gangId: G.gang.id,
+    gangDues: G.gang.dues,
+    ts: Date.now()
+  }, err => {
+    if (err) notify('Error sending invite: ' + err.message);
+    else notify('Invite sent to ' + target.name + ' (#' + target.id + ')!');
+  });
+}
+
+function acceptInvite(key, gangId, gangName, gangDues, fromUid) {
+  if (G.gang) { notify('You are already in a gang. Leave first.'); return; }
+  G.gang = { name: gangName, id: gangId, dues: gangDues, isLeader: false };
+  db.ref('gang_invites/' + currentUser.uid + '/' + key).remove();
+  notify('You joined ' + gangName + '!');
+  updateGangMenu();
+  updateAllDisplays();
+  saveGame();
+}
+
+function declineInvite(key) {
+  db.ref('gang_invites/' + currentUser.uid + '/' + key).remove();
+  updateGangMenu();
+}
+
+function loadGangInvites(containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = '<span style="font-size:10px; font-family:Verdana; color:#ccc;">Loading...</span>';
+  db.ref('gang_invites/' + currentUser.uid).once('value', snap => {
+    const invites = [];
+    snap.forEach(child => invites.push({ key: child.key, ...child.val() }));
+    if (invites.length === 0) {
+      el.innerHTML = '<span style="font-size:10px; font-family:Verdana; color:#ccc;">No pending invitations.</span>';
+      return;
+    }
+    el.innerHTML = invites.map(inv => `
+      <div style="font-family:Verdana; font-size:11px; color:#fff; margin-bottom:4px; border-bottom:1px solid #333; padding-bottom:3px;">
+        <b style="color:#ffcc66;">${inv.gangName}</b> (ID: ${inv.gangId}) — Dues: ${inv.gangDues}%<br>
+        <span style="color:#ccc;">From: ${inv.fromName}</span><br>
+        <a href="#" class="link" onclick="acceptInvite('${inv.key}',${inv.gangId},'${inv.gangName}',${inv.gangDues},'${inv.fromUid}'); return false;"><b>[Accept]</b></a>
+        &nbsp;
+        <a href="#" class="link2" onclick="declineInvite('${inv.key}'); return false;">[Decline]</a>
+      </div>`).join('');
+  });
 }
 
 function addCoLeader() {
@@ -2813,11 +2892,14 @@ function updateConsole() {
     gmEl.innerHTML = `<span style="color:red; font-size:11px; font-family:Verdana;"><b>${G.name} (#${G.id||0})</b></span>`;
     motdEl.innerHTML = `<span style="font-family:Verdana; font-size:10px; color:#fff;">Gang MOTD: (none)</span>`;
     giEl.innerHTML = `<span style="font-family:Verdana; font-size:10px; color:#fff;">Name: ${G.gang.name}<br>Dues: ${G.gang.dues}%</span>`;
+    const ciEl = document.getElementById('console-gang-invites');
+    if (ciEl) ciEl.innerHTML = '<span style="font-size:10px; font-family:Verdana; color:#ccc;">N/A — already in a gang.</span>';
   } else {
     capEl.textContent = '0 of 0';
     gmEl.innerHTML = '<span style="font-size:10px; color:#ccc; font-family:Verdana;">Not in a gang</span>';
     motdEl.innerHTML = '';
     giEl.innerHTML = '';
+    loadGangInvites('console-gang-invites');
   }
 
   atkInEl.innerHTML = '<span style="font-size:10px; color:#ccc; font-family:Verdana;">Loading...</span>';
