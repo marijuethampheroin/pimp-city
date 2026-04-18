@@ -1,0 +1,20 @@
+# Archives
+*.zip
+*.rar
+*.7z
+
+# Backup copies
+*- Copy.*
+*- copy.*
+
+# Firebase exports
+*.json
+
+# Images
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# Misc
+*.txt
