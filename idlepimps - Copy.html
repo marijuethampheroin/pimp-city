@@ -741,31 +741,6 @@ body.alt-theme #rh-select { border-color: var(--clr-green) !important; }
         <table class="shop-table">
           <tr><td><b>Qty</b></td><td><b>Name</b></td><td><b>Worth</b></td><td><b>You Have</b></td></tr>
           <tr>
-            <td><input type="number" id="sell-beer" min="0" value="0"></td>
-            <td>Beer</td><td>$1</td>
-            <td id="sell-beer-have">0</td>
-          </tr>
-          <tr>
-            <td><input type="number" id="sell-crack" min="0" value="0"></td>
-            <td>Crack</td><td>$4</td>
-            <td id="sell-crack-have">0</td>
-          </tr>
-          <tr>
-            <td><input type="number" id="sell-weed" min="0" value="0"></td>
-            <td>Weed</td><td>$15</td>
-            <td id="sell-weed-have">0</td>
-          </tr>
-          <tr>
-            <td><input type="number" id="sell-ak" min="0" value="0"></td>
-            <td>AK-47</td><td>$850</td>
-            <td id="sell-ak-have">0</td>
-          </tr>
-          <tr>
-            <td><input type="number" id="sell-vest" min="0" value="0"></td>
-            <td>Kevlar Vest</td><td>$3,000</td>
-            <td id="sell-vest-have">0</td>
-          </tr>
-          <tr>
             <td><input type="number" id="sell-thug" min="0" value="0"></td>
             <td>Thug</td><td>$1,000</td>
             <td id="sell-thug-have">0</td>
@@ -1000,8 +975,6 @@ body.alt-theme #rh-select { border-color: var(--clr-green) !important; }
           <div class="console-panel-header">Online Gang Members</div>
           <div class="console-panel-body" id="console-gang-members"></div>
           <div class="console-panel-header" style="margin-top:2px;">Gang Capacity: <span id="console-gang-cap">0 of 0</span></div>
-          <div class="console-panel-header" style="margin-top:2px;">Gang Invitations</div>
-          <div class="console-panel-body" id="console-gang-invites"></div>
         </div>
         <div class="console-panel">
           <div class="console-panel-header">Gang MOTD</div>
@@ -1523,7 +1496,7 @@ const CITY_MOD = {
 const TRAVEL_COST = { london: 30, atlanta: 300, vegas: 400, nyc: 50 };
 
 const ITEM_PRICES = { beer:2, condoms:1, crack:10, weed:25, ak:1500, vest:5500, thug:2500, ride:2500 };
-const SELL_PRICES = { beer:1, crack:4, weed:15, ak:850, vest:3000, thug:1000, ride:1000 };
+const SELL_PRICES = { thug:1000, ride:1000 };
 
 let G = null;
 let currentUser = null;
@@ -1687,13 +1660,8 @@ function updateAllDisplays() {
 
   // Mart
   setText('mart-cash', fmt(G.cash));
-  setText('sell-beer-have',  fmt(G.beer));
-  setText('sell-crack-have', fmt(G.crack));
-  setText('sell-weed-have',  fmt(G.weed));
-  setText('sell-ak-have',    fmt(G.ak));
-  setText('sell-vest-have',  fmt(G.vest));
-  setText('sell-thug-have',  fmt(G.thugs));
-  setText('sell-ride-have',  fmt(G.rides));
+  setText('sell-thug-have', fmt(G.thugs));
+  setText('sell-ride-have', fmt(G.rides));
 
   // Attack menu
   setText('atk-turns', fmt(G.turns));
@@ -2166,11 +2134,6 @@ function doTurnTricks(e) {
   if (G.history.length > 50) G.history.pop();
 
   updateAllDisplays();
-  // Pay gang dues into shared treasury
-  if (gangDues > 0 && G.gang) {
-    db.ref('gang_balances/' + G.gang.id).transaction(bal => (bal || 0) + gangDues);
-  }
-
   saveGame();
   showPage('turned');
   return false;
@@ -2226,43 +2189,18 @@ function doBuy(e) {
 
 function doSell(e) {
   e.preventDefault();
-  const sellBeer  = parseInt(document.getElementById('sell-beer').value)||0;
-  const sellCrack = parseInt(document.getElementById('sell-crack').value)||0;
-  const sellWeed  = parseInt(document.getElementById('sell-weed').value)||0;
-  const sellAk    = parseInt(document.getElementById('sell-ak').value)||0;
-  const sellVest  = parseInt(document.getElementById('sell-vest').value)||0;
-  const sellThug  = parseInt(document.getElementById('sell-thug').value)||0;
-  const sellRide  = parseInt(document.getElementById('sell-ride').value)||0;
+  const sellThug = parseInt(document.getElementById('sell-thug').value)||0;
+  const sellRide = parseInt(document.getElementById('sell-ride').value)||0;
 
-  if (sellBeer  > G.beer)   { notify('Not enough beer to sell!');         return false; }
-  if (sellCrack > G.crack)  { notify('Not enough crack to sell!');        return false; }
-  if (sellWeed  > G.weed)   { notify('Not enough weed to sell!');         return false; }
-  if (sellAk    > G.ak)     { notify('Not enough AK-47s to sell!');       return false; }
-  if (sellVest  > G.vest)   { notify('Not enough Kevlar Vests to sell!'); return false; }
-  if (sellThug  > G.thugs)  { notify('Not enough thugs to sell!');        return false; }
-  if (sellRide  > G.rides)  { notify('Not enough rides to sell!');        return false; }
-  if (sellBeer === 0 && sellCrack === 0 && sellWeed === 0 && sellAk === 0 && sellVest === 0 && sellThug === 0 && sellRide === 0) {
-    notify('Enter quantities to sell.'); return false;
-  }
+  if (sellThug > G.thugs) { notify('Not enough thugs to sell!'); return false; }
+  if (sellRide > G.rides) { notify('Not enough rides to sell!'); return false; }
+  if (sellThug === 0 && sellRide === 0) { notify('Enter quantities to sell.'); return false; }
 
-  const revenue = sellBeer  * SELL_PRICES.beer
-                + sellCrack * SELL_PRICES.crack
-                + sellWeed  * SELL_PRICES.weed
-                + sellAk    * SELL_PRICES.ak
-                + sellVest  * SELL_PRICES.vest
-                + sellThug  * SELL_PRICES.thug
-                + sellRide  * SELL_PRICES.ride;
-
-  G.cash  += revenue;
-  G.beer  -= sellBeer;
-  G.crack -= sellCrack;
-  G.weed  -= sellWeed;
-  G.ak    -= sellAk;
-  G.vest  -= sellVest;
+  const revenue = sellThug * SELL_PRICES.thug + sellRide * SELL_PRICES.ride;
+  G.cash += revenue;
   G.thugs -= sellThug;
   G.rides -= sellRide;
 
-  G.history.unshift({time: new Date().toLocaleString(), event: `Sold items at idle-Mart for $${fmt(revenue)}`});
   notify('Sold for $' + fmt(revenue));
   updateAllDisplays();
   saveGame();
@@ -2724,10 +2662,7 @@ function updateGangMenu() {
           Gang ID: <input type="text" id="gang-join-input" size="10">
           <button class="btn" onclick="joinGang()">Join Gang</button>
         </div>
-      </div>
-      <div style="font-family:Verdana; font-size:11px; color:#ffcc66; font-weight:bold; margin:6px 0 3px 0;">Pending Invitations</div>
-      <div id="gang-invites-menu"></div>`;
-    loadGangInvites('gang-invites-menu');
+      </div>`;
 
   } else if (G.gang.isLeader) {
     // ── Leader view ──
@@ -2777,9 +2712,7 @@ function updateGangMenu() {
 
       <div style="font-family:Verdana; font-size:12px; color:#ccc; margin:3px 0;"><b>Gang Dues: ${G.gang.dues}%</b></div>
       <div style="font-family:Verdana; font-size:12px; color:#ccc; margin:3px 0;"><b>Your gang's networth is: $${fmt(nw)}</b></div>
-      <div style="font-family:Verdana; font-size:12px; color:#ccc; margin:3px 0;"><b>Your gang's balance is: $<span id="gang-treasury-display">...</span></b>
-        &nbsp;<a href="#" class="link" onclick="withdrawGangFunds(); return false;">[Withdraw All]</a>
-      </div>
+      <div style="font-family:Verdana; font-size:12px; color:#ccc; margin:3px 0;"><b>Your gang's balance is: $${fmt(G.gangBalance)}</b></div>
       <div style="font-family:Verdana; font-size:12px; color:#ccc; margin:3px 0;"><b>Gang Thugs: ${fmt(G.gangThugs)}</b></div>
 
       <hr class="green">
@@ -2790,10 +2723,6 @@ function updateGangMenu() {
         &nbsp;<span style="color:#ccc; font-size:11px;">Leader</span>
         &nbsp;<b>$${fmt(nw)}</b>
       </div>`;
-    db.ref('gang_balances/' + G.gang.id).once('value', snap => {
-      const el = document.getElementById('gang-treasury-display');
-      if (el) el.textContent = fmt(snap.val() || 0);
-    });
 
   } else {
     // ── Member view ──
@@ -2803,14 +2732,10 @@ function updateGangMenu() {
       </div>
       <div style="font-family:Verdana; font-size:12px; color:#fff; margin:4px 0;"><b>Dues: ${G.gang.dues}%</b></div>
       <div style="font-family:Verdana; font-size:12px; color:#ccc; margin:4px 0;"><b>Gang Thugs: ${fmt(G.gangThugs)}</b></div>
-      <div style="font-family:Verdana; font-size:12px; color:#ccc; margin:4px 0;"><b>Gang Balance: $<span id="gang-treasury-display">...</span></b></div>
+      <div style="font-family:Verdana; font-size:12px; color:#ccc; margin:4px 0;"><b>Gang Balance: $${fmt(G.gangBalance)}</b></div>
       <div style="margin:8px 0;">
         <a href="#" class="link" onclick="leaveGang(); return false;"><b>Leave Gang</b></a>
       </div>`;
-    db.ref('gang_balances/' + G.gang.id).once('value', snap => {
-      const el = document.getElementById('gang-treasury-display');
-      if (el) el.textContent = fmt(snap.val() || 0);
-    });
   }
 }
 
@@ -2880,77 +2805,7 @@ function disbandGang() {
 }
 
 function invitePimp() {
-  if (!G.gang || !G.gang.isLeader) return;
-  const input = (document.getElementById('gang-invite-input').value || '').trim();
-  if (!input) { notify('Enter a pimp ID to invite.'); return; }
-  const target = cachedPlayers.find(p => String(p.id) === String(input) && !p.isPlayer);
-  if (!target) { notify('Pimp #' + input + ' not found. Check Rankings.'); return; }
-  if (target.gang) { notify(target.name + ' is already in a gang.'); return; }
-  db.ref('gang_invites/' + target.uid).push({
-    fromUid: currentUser.uid,
-    fromName: G.name,
-    gangName: G.gang.name,
-    gangId: G.gang.id,
-    gangDues: G.gang.dues,
-    ts: Date.now()
-  }, err => {
-    if (err) notify('Error sending invite: ' + err.message);
-    else notify('Invite sent to ' + target.name + ' (#' + target.id + ')!');
-  });
-}
-
-function acceptInvite(key, gangId, gangName, gangDues, fromUid) {
-  if (G.gang) { notify('You are already in a gang. Leave first.'); return; }
-  G.gang = { name: gangName, id: gangId, dues: gangDues, isLeader: false };
-  db.ref('gang_invites/' + currentUser.uid + '/' + key).remove();
-  notify('You joined ' + gangName + '!');
-  updateGangMenu();
-  updateAllDisplays();
-  saveGame();
-}
-
-function declineInvite(key) {
-  db.ref('gang_invites/' + currentUser.uid + '/' + key).remove();
-  updateGangMenu();
-}
-
-function loadGangInvites(containerId) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  el.innerHTML = '<span style="font-size:10px; font-family:Verdana; color:#ccc;">Loading...</span>';
-  db.ref('gang_invites/' + currentUser.uid).once('value', snap => {
-    const invites = [];
-    snap.forEach(child => invites.push({ key: child.key, ...child.val() }));
-    if (invites.length === 0) {
-      el.innerHTML = '<span style="font-size:10px; font-family:Verdana; color:#ccc;">No pending invitations.</span>';
-      return;
-    }
-    el.innerHTML = invites.map(inv => `
-      <div style="font-family:Verdana; font-size:11px; color:#fff; margin-bottom:4px; border-bottom:1px solid #333; padding-bottom:3px;">
-        <b style="color:#ffcc66;">${inv.gangName}</b> (ID: ${inv.gangId}) — Dues: ${inv.gangDues}%<br>
-        <span style="color:#ccc;">From: ${inv.fromName}</span><br>
-        <a href="#" class="link" onclick="acceptInvite('${inv.key}',${inv.gangId},'${inv.gangName}',${inv.gangDues},'${inv.fromUid}'); return false;"><b>[Accept]</b></a>
-        &nbsp;
-        <a href="#" class="link2" onclick="declineInvite('${inv.key}'); return false;">[Decline]</a>
-      </div>`).join('');
-  });
-}
-
-function withdrawGangFunds() {
-  if (!G.gang || !G.gang.isLeader) { notify('Only the gang leader can withdraw funds.'); return; }
-  const ref = db.ref('gang_balances/' + G.gang.id);
-  ref.once('value', snap => {
-    const bal = snap.val() || 0;
-    if (bal <= 0) { notify('Gang treasury is empty.'); return; }
-    ref.set(0, err => {
-      if (err) { notify('Withdrawal failed: ' + err.message); return; }
-      G.cash += bal;
-      notify('Withdrew $' + fmt(bal) + ' from the gang treasury!');
-      updateGangMenu();
-      updateAllDisplays();
-      saveGame();
-    });
-  });
+  notify('Invite sent. (Multiplayer feature — requires other players online.)');
 }
 
 function addCoLeader() {
@@ -2979,14 +2834,11 @@ function updateConsole() {
     gmEl.innerHTML = `<span style="color:red; font-size:11px; font-family:Verdana;"><b>${G.name} (#${G.id||0})</b></span>`;
     motdEl.innerHTML = `<span style="font-family:Verdana; font-size:10px; color:#fff;">Gang MOTD: (none)</span>`;
     giEl.innerHTML = `<span style="font-family:Verdana; font-size:10px; color:#fff;">Name: ${G.gang.name}<br>Dues: ${G.gang.dues}%</span>`;
-    const ciEl = document.getElementById('console-gang-invites');
-    if (ciEl) ciEl.innerHTML = '<span style="font-size:10px; font-family:Verdana; color:#ccc;">N/A — already in a gang.</span>';
   } else {
     capEl.textContent = '0 of 0';
     gmEl.innerHTML = '<span style="font-size:10px; color:#ccc; font-family:Verdana;">Not in a gang</span>';
     motdEl.innerHTML = '';
     giEl.innerHTML = '';
-    loadGangInvites('console-gang-invites');
   }
 
   atkInEl.innerHTML = '<span style="font-size:10px; color:#ccc; font-family:Verdana;">Loading...</span>';

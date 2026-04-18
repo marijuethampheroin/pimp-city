@@ -46,7 +46,10 @@ These features are fully implemented and tested with real players:
 - Persistent navigation (URL hash routing, browser back/forward)
 - FAQ page (fully rewritten April 2026, comprehensive)
 - **Dope Wars side-game** (`dopewars.html`) — standalone buy/sell game, shared Firebase market,
-  live chat, daily leaderboard, token rewards (top player each UTC day gets 1 token, max 3/round)
+  live chat, token rewards (top player each UTC day gets 1 token, max 3/round)
+- **Dope Wars leaderboard** — 3 panels: Live Standings (real-time `.on()` listener, Rank/Pimp/Gang/Cash/Tokens),
+  Round History (combined past round winners + daily token awards in one table), Gang Cash Rankings
+  (aggregated Dope Wars cash by gang, cross-referenced from `players/`)
 
 
 ---
