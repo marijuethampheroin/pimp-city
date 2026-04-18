@@ -283,6 +283,12 @@ dopewars/
       ".indexOn": ["toUid", "fromUid"]
     },
     "gangs": { ".read": "auth != null", ".write": "auth != null" },
+    "gang_balances": {
+      "$gangId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
     "gang_invites": {
       "$uid": {
         ".read": "auth.uid === $uid",

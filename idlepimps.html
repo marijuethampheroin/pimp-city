@@ -2136,6 +2136,11 @@ function doTurnTricks(e) {
   if (G.history.length > 50) G.history.pop();
 
   updateAllDisplays();
+  // Pay gang dues into shared treasury
+  if (gangDues > 0 && G.gang) {
+    db.ref('gang_balances/' + G.gang.id).transaction(bal => (bal || 0) + gangDues);
+  }
+
   saveGame();
   showPage('turned');
   return false;
@@ -2717,7 +2722,9 @@ function updateGangMenu() {
 
       <div style="font-family:Verdana; font-size:12px; color:#ccc; margin:3px 0;"><b>Gang Dues: ${G.gang.dues}%</b></div>
       <div style="font-family:Verdana; font-size:12px; color:#ccc; margin:3px 0;"><b>Your gang's networth is: $${fmt(nw)}</b></div>
-      <div style="font-family:Verdana; font-size:12px; color:#ccc; margin:3px 0;"><b>Your gang's balance is: $${fmt(G.gangBalance)}</b></div>
+      <div style="font-family:Verdana; font-size:12px; color:#ccc; margin:3px 0;"><b>Your gang's balance is: $<span id="gang-treasury-display">...</span></b>
+        &nbsp;<a href="#" class="link" onclick="withdrawGangFunds(); return false;">[Withdraw All]</a>
+      </div>
       <div style="font-family:Verdana; font-size:12px; color:#ccc; margin:3px 0;"><b>Gang Thugs: ${fmt(G.gangThugs)}</b></div>
 
       <hr class="green">
@@ -2728,6 +2735,10 @@ function updateGangMenu() {
         &nbsp;<span style="color:#ccc; font-size:11px;">Leader</span>
         &nbsp;<b>$${fmt(nw)}</b>
       </div>`;
+    db.ref('gang_balances/' + G.gang.id).once('value', snap => {
+      const el = document.getElementById('gang-treasury-display');
+      if (el) el.textContent = fmt(snap.val() || 0);
+    });
 
   } else {
     // ── Member view ──
@@ -2737,10 +2748,14 @@ function updateGangMenu() {
       </div>
       <div style="font-family:Verdana; font-size:12px; color:#fff; margin:4px 0;"><b>Dues: ${G.gang.dues}%</b></div>
       <div style="font-family:Verdana; font-size:12px; color:#ccc; margin:4px 0;"><b>Gang Thugs: ${fmt(G.gangThugs)}</b></div>
-      <div style="font-family:Verdana; font-size:12px; color:#ccc; margin:4px 0;"><b>Gang Balance: $${fmt(G.gangBalance)}</b></div>
+      <div style="font-family:Verdana; font-size:12px; color:#ccc; margin:4px 0;"><b>Gang Balance: $<span id="gang-treasury-display">...</span></b></div>
       <div style="margin:8px 0;">
         <a href="#" class="link" onclick="leaveGang(); return false;"><b>Leave Gang</b></a>
       </div>`;
+    db.ref('gang_balances/' + G.gang.id).once('value', snap => {
+      const el = document.getElementById('gang-treasury-display');
+      if (el) el.textContent = fmt(snap.val() || 0);
+    });
   }
 }
 
@@ -2863,6 +2878,23 @@ function loadGangInvites(containerId) {
         &nbsp;
         <a href="#" class="link2" onclick="declineInvite('${inv.key}'); return false;">[Decline]</a>
       </div>`).join('');
+  });
+}
+
+function withdrawGangFunds() {
+  if (!G.gang || !G.gang.isLeader) { notify('Only the gang leader can withdraw funds.'); return; }
+  const ref = db.ref('gang_balances/' + G.gang.id);
+  ref.once('value', snap => {
+    const bal = snap.val() || 0;
+    if (bal <= 0) { notify('Gang treasury is empty.'); return; }
+    ref.set(0, err => {
+      if (err) { notify('Withdrawal failed: ' + err.message); return; }
+      G.cash += bal;
+      notify('Withdrew $' + fmt(bal) + ' from the gang treasury!');
+      updateGangMenu();
+      updateAllDisplays();
+      saveGame();
+    });
   });
 }
 
