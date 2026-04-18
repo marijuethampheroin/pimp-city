@@ -853,6 +853,7 @@ function loadLiveStandings() {
     const rows = [];
     snap.forEach(child => rows.push({ uid: child.key, ...child.val() }));
     rows.sort((a, b) => (b.cash || 0) - (a.cash || 0));
+    console.log('lb-standings: roundId=' + G.roundId + ' rows=' + rows.length, rows.map(r => r.name + '=$' + r.cash));
     if (rows.length > 50) rows.splice(50);
     tbody.innerHTML = '';
     if (!rows.length) {
