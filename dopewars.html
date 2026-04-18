@@ -827,52 +827,50 @@ let lbTokenCounts  = {}; // uid -> token count for current round
 
 function loadLeaderboard() {
   if (!G.roundId) return;
-  // Pre-load player gang data once, then populate all three tables
-  db.ref('players').once('value', snap => {
+  document.getElementById('lb-round').textContent = G.roundId;
+  // Fetch all three sources in parallel — one network hit each, no cache races
+  Promise.all([
+    db.ref('players').once('value'),
+    db.ref('dopewars/scores/' + G.roundId).once('value'),
+    db.ref('dopewars/tokenCount/' + G.roundId).once('value')
+  ]).then(([playerSnap, scoresSnap, tokenSnap]) => {
     lbPlayerCache = {};
-    snap.forEach(child => {
+    playerSnap.forEach(child => {
       const p = child.val();
       if (p) lbPlayerCache[child.key] = { gang: p.gang || null };
     });
-    loadLiveStandings();
+    lbTokenCounts = tokenSnap.val() || {};
+    const scores = {};
+    scoresSnap.forEach(child => { scores[child.key] = child.val(); });
+    loadLiveStandings(scores);
     loadRoundHistory();
-    loadGangRankings();
+    loadGangRankings(scores);
   });
 }
 
 // ── Panel 1: Standings ───────────────────────
-function loadLiveStandings() {
+function loadLiveStandings(scores) {
   const tbody = document.getElementById('lb-live-body');
-  tbody.innerHTML = '<tr><td colspan="5" style="color:#555;text-align:center">Loading...</td></tr>';
-
-  db.ref('dopewars/tokenCount/' + G.roundId).once('value', tokenSnap => {
-    lbTokenCounts = tokenSnap.val() || {};
-  });
-
-  db.ref('dopewars/scores/' + G.roundId).once('value', snap => {
-    const rows = [];
-    snap.forEach(child => rows.push({ uid: child.key, ...child.val() }));
-    rows.sort((a, b) => (b.cash || 0) - (a.cash || 0));
-    console.log('lb-standings: roundId=' + G.roundId + ' rows=' + rows.length, rows.map(r => r.name + '=$' + r.cash));
-    if (rows.length > 50) rows.splice(50);
-    tbody.innerHTML = '';
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="5" style="color:#555;text-align:center">No scores yet this round.</td></tr>';
-      return;
-    }
-    rows.forEach((r, i) => {
-      const tr = document.createElement('tr');
-      if (r.uid === G.uid) tr.className = 'lb-you';
-      const pi = lbPlayerCache[r.uid];
-      const gangCell = (pi && pi.gang) ? esc(pi.gang.name) : '<span style="color:#555">—</span>';
-      const tokens = lbTokenCounts[r.uid] || 0;
-      tr.innerHTML = '<td>' + (i+1) + '</td>' +
-                     '<td>' + esc(r.name) + '</td>' +
-                     '<td>' + gangCell + '</td>' +
-                     '<td>$' + fmt(r.cash) + '</td>' +
-                     '<td style="text-align:center">' + (tokens || '<span style="color:#555">—</span>') + '</td>';
-      tbody.appendChild(tr);
-    });
+  const rows = Object.entries(scores).map(([uid, v]) => ({ uid, ...v }));
+  rows.sort((a, b) => (b.cash || 0) - (a.cash || 0));
+  if (rows.length > 50) rows.splice(50);
+  tbody.innerHTML = '';
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:#555;text-align:center">No scores yet this round.</td></tr>';
+    return;
+  }
+  rows.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    if (r.uid === G.uid) tr.className = 'lb-you';
+    const pi = lbPlayerCache[r.uid];
+    const gangCell = (pi && pi.gang) ? esc(pi.gang.name) : '<span style="color:#555">—</span>';
+    const tokens = lbTokenCounts[r.uid] || 0;
+    tr.innerHTML = '<td>' + (i+1) + '</td>' +
+                   '<td>' + esc(r.name) + '</td>' +
+                   '<td>' + gangCell + '</td>' +
+                   '<td>$' + fmt(r.cash) + '</td>' +
+                   '<td style="text-align:center">' + (tokens || '<span style="color:#555">—</span>') + '</td>';
+    tbody.appendChild(tr);
   });
 }
 
@@ -942,41 +940,36 @@ function loadRoundHistory() {
 }
 
 // ── Panel 3: Gang Cash Rankings ──────────────
-function loadGangRankings() {
+function loadGangRankings(scores) {
   document.getElementById('lb-gang-round').textContent = G.roundId;
   const tbody = document.getElementById('lb-gang-body');
-  tbody.innerHTML = '<tr><td colspan="4" style="color:#555;text-align:center">Loading...</td></tr>';
+  const gangMap = {};
 
-  db.ref('dopewars/scores/' + G.roundId).once('value', scoresSnap => {
-    const scores = scoresSnap.val() || {};
-    const gangMap = {};
+  Object.entries(scores).forEach(([uid, score]) => {
+    const pi = lbPlayerCache[uid];
+    if (!pi || !pi.gang) return;
+    const key = String(pi.gang.id || pi.gang.name);
+    if (!key) return;
+    if (!gangMap[key]) gangMap[key] = { name: pi.gang.name, members: 0, cash: 0, isMyGang: false };
+    gangMap[key].members++;
+    gangMap[key].cash += score.cash || 0;
+    if (uid === G.uid) gangMap[key].isMyGang = true;
+  });
 
-    Object.entries(scores).forEach(([uid, score]) => {
-      const pi = lbPlayerCache[uid];
-      if (!pi || !pi.gang) return;
-      const key = String(pi.gang.id || pi.gang.name);
-      if (!key) return;
-      if (!gangMap[key]) gangMap[key] = { name: pi.gang.name, members: 0, cash: 0, isMyGang: false };
-      gangMap[key].members++;
-      gangMap[key].cash += score.cash || 0;
-      if (uid === G.uid) gangMap[key].isMyGang = true;
-    });
-
-    const gangs = Object.values(gangMap).sort((a, b) => b.cash - a.cash);
-    tbody.innerHTML = '';
-    if (!gangs.length) {
-      tbody.innerHTML = '<tr><td colspan="4" style="color:#555;text-align:center">No gang data for this round.</td></tr>';
-      return;
-    }
-    gangs.forEach((g, i) => {
-      const tr = document.createElement('tr');
-      if (g.isMyGang) tr.className = 'lb-you';
-      tr.innerHTML = '<td>' + (i+1) + '</td>' +
-                     '<td>' + esc(g.name) + '</td>' +
-                     '<td style="text-align:center">' + g.members + '</td>' +
-                     '<td>$' + fmt(g.cash) + '</td>';
-      tbody.appendChild(tr);
-    });
+  const gangs = Object.values(gangMap).sort((a, b) => b.cash - a.cash);
+  tbody.innerHTML = '';
+  if (!gangs.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="color:#555;text-align:center">No gang data for this round.</td></tr>';
+    return;
+  }
+  gangs.forEach((g, i) => {
+    const tr = document.createElement('tr');
+    if (g.isMyGang) tr.className = 'lb-you';
+    tr.innerHTML = '<td>' + (i+1) + '</td>' +
+                   '<td>' + esc(g.name) + '</td>' +
+                   '<td style="text-align:center">' + g.members + '</td>' +
+                   '<td>$' + fmt(g.cash) + '</td>';
+    tbody.appendChild(tr);
   });
 }
 
