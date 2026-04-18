@@ -361,7 +361,11 @@ body.alt-theme [style*="border: 1px solid #FFCC33"] { border-color: var(--clr-ye
 
       <!-- Live Standings -->
       <div class="panel">
-        <div class="panel-title">LIVE STANDINGS — ROUND <span id="lb-round">—</span></div>
+        <div class="panel-title">
+          STANDINGS — ROUND <span id="lb-round">—</span>
+          <a href="#" onclick="loadLeaderboard();return false;"
+             style="float:right;font-size:10px;font-weight:normal;color:var(--clr-yellow)">↻ Refresh</a>
+        </div>
         <p style="margin-bottom:6px;color:#888;font-size:11px">
           Top player at UTC midnight each day earns 1 token in Pimp City (max 3/round).
         </p>
@@ -818,7 +822,6 @@ function sendChat() {
 //  LEADERBOARD
 // ══════════════════════════════════════════════
 
-let lbLiveListener = null;
 let lbPlayerCache  = {}; // uid -> { gang }
 let lbTokenCounts  = {}; // uid -> token count for current round
 
@@ -837,23 +840,16 @@ function loadLeaderboard() {
   });
 }
 
-// ── Panel 1: Live Standings ──────────────────
+// ── Panel 1: Standings ───────────────────────
 function loadLiveStandings() {
-  if (lbLiveListener) {
-    db.ref('dopewars/scores/' + lbLiveListener).off();
-    lbLiveListener = null;
-  }
   const tbody = document.getElementById('lb-live-body');
   tbody.innerHTML = '<tr><td colspan="5" style="color:#555;text-align:center">Loading...</td></tr>';
 
-  // Fetch token counts independently — doesn't block the live listener
-  db.ref('dopewars/tokenCount/' + G.roundId).once('value', snap => {
-    lbTokenCounts = snap.val() || {};
+  db.ref('dopewars/tokenCount/' + G.roundId).once('value', tokenSnap => {
+    lbTokenCounts = tokenSnap.val() || {};
   });
 
-  // Attach live listener at top level — no nesting
-  lbLiveListener = G.roundId;
-  db.ref('dopewars/scores/' + G.roundId).on('value', snap => {
+  db.ref('dopewars/scores/' + G.roundId).once('value', snap => {
     const rows = [];
     snap.forEach(child => rows.push({ uid: child.key, ...child.val() }));
     rows.sort((a, b) => (b.cash || 0) - (a.cash || 0));
@@ -1159,10 +1155,6 @@ function logEvent(msg) {
 // ══════════════════════════════════════════════
 
 function showTab(name) {
-  if (name !== 'leaderboard' && lbLiveListener) {
-    db.ref('dopewars/scores/' + lbLiveListener).off();
-    lbLiveListener = null;
-  }
   document.getElementById('tab-market').style.display = name === 'market' ? '' : 'none';
   document.getElementById('tab-leaderboard').style.display = name === 'leaderboard' ? '' : 'none';
   if (name === 'leaderboard') loadLeaderboard();
