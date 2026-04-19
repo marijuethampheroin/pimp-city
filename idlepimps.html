@@ -58,8 +58,6 @@ a.link2:hover { color: #ccc; }
   font-size: 22px;
   color: #fff;
   text-shadow: 0 0 8px var(--clr-green), 2px 2px 0 #000;
-  border: 2px solid var(--clr-green);
-  padding: 4px 10px;
   letter-spacing: 1px;
 }
 
@@ -272,6 +270,56 @@ body.alt-theme [style*="border: 2px solid #ffcc00"] { border-color: var(--clr-ye
 body.alt-theme td[bgcolor="#336600"] { background-color: var(--clr-green) !important; }
 body.alt-theme #round-end-winner { color: var(--clr-yellow) !important; }
 body.alt-theme #rh-select { border-color: var(--clr-green) !important; }
+
+/* Dope Wars link color cycle */
+@keyframes dopewars-cycle {
+  0%   { color: #336600; }
+  33%  { color: #ffcc00; }
+  66%  { color: #660066; }
+  100% { color: #336600; }
+}
+#dopewars-link {
+  display: block;
+  padding: 1px 0;
+  font-size: 12px;
+  font-family: Verdana, sans-serif;
+  text-decoration: none;
+  font-weight: bold;
+  animation: dopewars-cycle 2s infinite;
+}
+#dopewars-link:hover { color: #fff !important; animation: none; }
+
+/* New IdlePimps link — green/yellow cycle */
+@keyframes idlepimps-cycle {
+  0%   { color: #336600; }
+  50%  { color: #ffcc00; }
+  100% { color: #336600; }
+}
+#idlepimps-link {
+  display: block;
+  padding: 1px 0;
+  font-size: 12px;
+  font-family: Verdana, sans-serif;
+  text-decoration: none;
+  font-weight: bold;
+  animation: idlepimps-cycle 2s infinite;
+}
+#idlepimps-link:hover { color: #fff !important; animation: none; }
+
+/* Classic Pimpageddon link — static orange */
+#pimpageddon-link {
+  display: block;
+  padding: 1px 0;
+  font-size: 12px;
+  font-family: Verdana, sans-serif;
+  text-decoration: none;
+  font-weight: bold;
+  color: #ff9900;
+}
+#pimpageddon-link:hover { color: #fff !important; }
+
+/* News/Updates stub button */
+.news-link { color: #fffacd !important; }
 </style>
 </head>
 <body>
@@ -281,10 +329,11 @@ body.alt-theme #rh-select { border-color: var(--clr-green) !important; }
 <div id="wrapper">
   <!-- HEADER -->
   <div id="header">
-    <div id="logo-area">
-      <div>
+    <div id="logo-area" style="position:relative;">
+      <a href="#" onclick="doSignOut(); return false;"><img src="the_pimp.png" style="position:absolute; bottom:0; left:0; height:58px; z-index:10; cursor:pointer;"></a>
+      <div style="padding-left:50px;">
         <div id="logo-sub">Where Your Hoes At?</div>
-        <div id="logo-text">&#127808; PIMP CITY</div>
+        <a href="#" onclick="doSignOut(); return false;" style="text-decoration:none;"><div id="logo-text">PIMP CITY</div></a>
       </div>
     </div>
     <div id="welcome-text">
@@ -564,7 +613,6 @@ body.alt-theme #rh-select { border-color: var(--clr-green) !important; }
             <div class="stats-cat">Lost: <span class="stats-val" id="stat-cash-lost">$0</span></div>
           </div>
           <div class="section-gap"></div>
-          <a href="dopewars.html" target="_blank" class="link"><b>Dope Wars</b></a>
         </div>
 
         <!-- CENTER COL -->
@@ -610,6 +658,8 @@ body.alt-theme #rh-select { border-color: var(--clr-green) !important; }
         <div id="col-right">
           <a href="#" class="link" onclick="doSignOut()"><b>Log-Out</b></a>
           <a href="#" class="link" onclick="showPage('prefs')"><b>Preferences</b></a>
+          <div class="section-gap" style="height:4px"></div>
+          <a href="#" class="link news-link" onclick="showPage('news')"><b>News / Updates</b></a>
           <div class="section-gap"></div>
           <a href="#" class="link" onclick="showPage('turn-tricks')"><b>Turn Tricks</b></a>
           <div class="section-gap" style="height:4px"></div>
@@ -627,6 +677,7 @@ body.alt-theme #rh-select { border-color: var(--clr-green) !important; }
           <div class="section-gap"></div>
           <a href="#" class="link" onclick="showPage('casino')"><b>Casino</b></a>
           <div class="section-gap"></div>
+          <a href="dopewars.html" target="_blank" id="dopewars-link"><b>Dope Wars</b></a>
 
           <!-- Find Pimp -->
           <div id="find-form">
@@ -634,6 +685,9 @@ body.alt-theme #rh-select { border-color: var(--clr-green) !important; }
             <input type="text" id="find-input" size="12">
             <input type="submit" value="find" onclick="findPimp()">
           </div>
+          <div class="section-gap"></div>
+          <a href="https://idlepimps.net" target="_blank" id="idlepimps-link"><b>New IdlePimps!</b></a>
+          <a href="https://pimpageddon.com" target="_blank" id="pimpageddon-link"><b>Classic Pimpageddon</b></a>
         </div>
       </div>
 
