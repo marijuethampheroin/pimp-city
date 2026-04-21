@@ -1854,12 +1854,24 @@ function updateTravelPage() {
 // FIREBASE PLAYER LOADING
 // ============================================================
 let cachedPlayers = []; // refreshed on rankings/attack pages
+let _playersRef = null;
+let _playersListener = null;
+
+function detachPlayersListener() {
+  if (_playersRef && _playersListener) {
+    _playersRef.off('value', _playersListener);
+    _playersListener = null;
+    _playersRef = null;
+  }
+}
 
 function loadAllPlayers(callback) {
+  detachPlayersListener();
   // Read tick first so we can filter to current round only
   db.ref('tick/roundId').once('value', tickSnap => {
     const currentRoundId = tickSnap.val() || 1;
-    db.ref('players').once('value', snap => {
+    _playersRef = db.ref('players');
+    _playersListener = _playersRef.on('value', snap => {
       cachedPlayers = [];
       snap.forEach(child => {
         const p = child.val();
@@ -3853,6 +3865,9 @@ function showPage(name) {
     return;
   }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  // Detach live rankings listener when leaving rankings pages
+  const rankingPages = ['rankings', 'city-rankings', 'attack-rankings', 'gang-rankings'];
+  if (!rankingPages.includes(name)) detachPlayersListener();
   if (name !== 'login' && name !== 'signup' && name !== 'activate' && name !== 'round-end') {
     window.location.hash = name;
     sessionStorage.setItem('lastPage', name);
