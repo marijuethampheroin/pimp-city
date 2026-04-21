@@ -699,6 +699,15 @@ body.alt-theme #rh-select { border-color: var(--clr-green) !important; }
       </div>
     </div><!-- end page-main -->
 
+    <!-- NEWS PAGE -->
+    <div id="page-news" class="page">
+      <div class="page-title">News / Updates</div>
+      <div id="news-content" style="padding:8px;"></div>
+      <div style="text-align:center; padding:8px;">
+        <a href="#" class="link" onclick="showPage('main')"><b>&laquo; Back to Main</b></a>
+      </div>
+    </div>
+
     <!-- TURN TRICKS PAGE -->
     <div id="page-turn-tricks" class="page">
       <div class="page-title">Turn Tricks</div>
@@ -3532,7 +3541,41 @@ function loadNews() {
     snap.forEach(child => posts.unshift(child.val())); // newest first
 
     if (!posts.length) {
-      // Fallback hardcoded post so page never looks empty
+      // Fallback hardcoded posts so page never looks empty
+      posts.push({
+        title: 'PLANNED UPDATES',
+        postedBy: 'Admin',
+        ts: Date.parse('20 Apr 2026'),
+        body: '<b>Dope Wars</b><br>' +
+          '&bull; UI navigation improvements (add link back to Pimp City, general navigation polish)<br>' +
+          '&bull; Leaderboard overhaul (multiple fixes and improvements TBD)<br>' +
+          '&bull; UI reorder: move stash panel below travel; add city-level travel to the travel box<br>' +
+          '&bull; Heat mechanic: drug sales accumulate Heat, increasing police bust/raid likelihood (based on profit, not movement)<br>' +
+          '&bull; Inventory capacity upgrades (sliding scale: +10 capacity at $1M, $5M, $30M, etc.; exponential cost)<br>' +
+          '&bull; Random events visible to all players in event log ("[event] happened to [player] in [city]"); your own deals stay private; attacker/target info stays vague when events lead to PvP<br>' +
+          '&bull; Upcoming PvP and gang features<br><br>' +
+          '<b>Pimp City</b><br>' +
+          '&bull; Hoe burn mechanic: hoes die if tricks are turned without condoms (formula TBD)<br>' +
+          '&bull; Quick-sell condoms button<br>' +
+          '&bull; Quick-buy crack button (10 crack per hoe, for restocking between trick-turning sessions)<br>' +
+          '&bull; Fix Crack-u-lator formula (estimated crack needed to steal hoes)<br>' +
+          '&bull; Idle store fractional buy buttons (1/4, 1/2, Max)<br>' +
+          '&bull; Turn Tricks buttons: [10] [25] [50] [100]<br>' +
+          '&bull; Recruit thugs passively while turning tricks<br>' +
+          '&bull; Gang pool lowriders<br>' +
+          '&bull; Gang members set individual contribution % (alongside leader-set %)<br>' +
+          '&bull; Gang chat in console<br>' +
+          '&bull; Gang profile pages + application system<br>' +
+          '&bull; Custom player icons in rankings pages and on pimp profiles<br>' +
+          '&bull; Premium pimp profile: custom header/footer<br>' +
+          '&bull; Alt color scheme visible on pimp profile to other players; additional schemes and customizable colors<br>' +
+          '&bull; Travel page: minor QoL changes<br>' +
+          '&bull; Bots (colorized bot IDs)<br>' +
+          '&bull; Forums section<br>' +
+          '&bull; Casino: blackjack, slots, and original card designs<br>' +
+          '&bull; New hero image/banner<br>' +
+          '&bull; Teaser link to secret new game ;)'
+      });
       posts.push({
         title: 'WELCOME TO PIMP CITY',
         postedBy: 'Admin',
@@ -3793,6 +3836,7 @@ function showPage(name) {
       setText('casino-turns-have', fmt(G.turns));
       syncCasinoLostTotals();
     }
+    if (name === 'news') loadNews();
     if (name === 'player-titles') loadAndRenderTitles();
     if (name === 'tokens') updateTokenPage();
     if (name === 'round-history') {
