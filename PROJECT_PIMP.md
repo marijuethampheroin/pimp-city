@@ -1,6 +1,6 @@
 # Project Pimp — Master Document
 > README + Changelog + Handoff in one file.
-> Last updated: April 17, 2026.
+> Last updated: April 20, 2026.
 
 ---
 
@@ -300,6 +300,10 @@ dopewars/
     },
     "hall_of_fame": { ".read": true, ".write": "auth != null" },
     "round_history": { ".read": true, ".write": "auth != null" },
+    "forums": {
+      ".read": true,
+      ".write": "auth != null"
+    },
     "dopewars": {
       "market":     { ".read": true, ".write": "auth != null" },
       "scores":     { ".read": true, ".write": "auth != null" },
@@ -505,6 +509,28 @@ dopewars/
 - **dopewars.html:** reads `p.altTheme` from the player Firebase record on auth load
   alongside `p.name` and `p.city`.
 
+
+### v0.15 — Forums (April 20, 2026)
+- **Forums section added:** 3-tier navigation — board list → thread list → thread view.
+  Accessible from the right column nav (between Hall of Fame and Casino). Whitelisted
+  for between-rounds browsing alongside rankings and hall of fame.
+- **Five boards:** General Chat, Tips & Tricks, Gang Shit, Bug Reports & Suggestions,
+  Rules & Guidelines. Rules board is admin-post-only for new threads; all other boards
+  are open to any logged-in player.
+- **Thread features:** threads show reply count and last post author/date on the list
+  view. Pinned threads sort to the top. New Thread form is inline (no page change).
+- **Post features:** posts show author name, timestamp, and inline Delete link for
+  the author or admin. Report link for other players. 3 unique reports = auto-delete.
+  200-post cap per thread. No post editing (admin excepted via direct Firebase).
+- **Rules & Guidelines auto-seeded:** on first load, a pinned thread with conduct
+  rules is written to Firebase automatically if none exists. Admin can edit the post
+  body directly in Firebase or via a future admin panel hook.
+- **Alt-theme compatible:** all forum UI uses CSS variables (`var(--clr-green)`,
+  `var(--clr-yellow)`) so purple/green alt scheme applies automatically.
+- **Firebase structure:** `forums/{boardId}/threads/{threadId}/posts/{postId}`.
+  Forums reset with rounds (same as all other player data).
+- **`escHtml()` utility added:** shared HTML-escaping function used by forums to
+  prevent XSS from user-submitted post content.
 
 ### v0.14 — Gang Rankings + Gang Invite System (April 17, 2026)
 - **Gang Rankings page fully implemented:** replaced stub (which only showed the current

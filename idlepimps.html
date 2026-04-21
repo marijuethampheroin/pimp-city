@@ -674,6 +674,8 @@ body.alt-theme #rh-select { border-color: var(--clr-green) !important; }
           <a href="#" class="link" onclick="showPage('round-history')"><b>Round History</b></a>
           <div class="section-gap" style="height:4px"></div>
           <a href="#" class="link" onclick="showPage('hall-of-fame')"><b>Hall of Fame</b></a>
+          <div class="section-gap" style="height:4px"></div>
+          <a href="#" class="link" onclick="showPage('forums')"><b>Forums</b></a>
           <div class="section-gap"></div>
           <a href="#" class="link" onclick="showPage('casino')"><b>Casino</b></a>
           <div class="section-gap"></div>
@@ -1575,6 +1577,132 @@ body.alt-theme #rh-select { border-color: var(--clr-green) !important; }
       </div>
       <div style="text-align:center; margin-top:8px;">
         <a href="#" class="link" onclick="showPage('main')"><b>MAIN MENU</b></a>
+      </div>
+    </div>
+
+    <!-- FORUMS — BOARD LIST PAGE -->
+    <div class="page" id="page-forums">
+      <div style="padding:8px 10px;">
+        <table width="100%" cellspacing="0" cellpadding="0" border="0">
+          <tr>
+            <td><font color="#ffcc00" size="+1" face="VERDANA"><b>💬 FORUMS</b></font></td>
+          </tr>
+        </table>
+        <hr class="green">
+        <table width="100%" cellspacing="0" cellpadding="0" border="0" id="forum-board-list">
+          <tr>
+            <td bgcolor="#336600" width="55%" style="padding:3px 6px;"><font color="#fff" size="1" face="VERDANA"><b>Board</b></font></td>
+            <td bgcolor="#336600" width="15%" align="center" style="padding:3px 6px;"><font color="#fff" size="1" face="VERDANA"><b>Threads</b></font></td>
+            <td bgcolor="#336600" width="30%" style="padding:3px 6px;"><font color="#fff" size="1" face="VERDANA"><b>Last Post</b></font></td>
+          </tr>
+          <tr><td colspan="3" style="padding:4px; font-family:Verdana; font-size:10px; color:#888;">Loading...</td></tr>
+        </table>
+        <hr class="green">
+        <div style="text-align:center; margin-top:6px;">
+          <a href="#" class="link" onclick="showPage('main')">« Main Menu</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORUMS — THREAD LIST PAGE -->
+    <div class="page" id="page-forum-board">
+      <div style="padding:8px 10px;">
+        <table width="100%" cellspacing="0" cellpadding="0" border="0">
+          <tr>
+            <td><font color="#ffcc00" size="+1" face="VERDANA"><b id="forum-board-title">Board</b></font></td>
+            <td align="right">
+              <input type="button" id="forum-new-thread-btn" value="+ New Thread" onclick="showForumNewThread()"
+                style="background:var(--clr-green); color:#fff; border:1px solid var(--clr-yellow); font-family:Verdana; font-size:10px; padding:2px 8px; cursor:pointer;">
+            </td>
+          </tr>
+        </table>
+        <hr class="green">
+        <table width="100%" cellspacing="0" cellpadding="0" border="0" id="forum-thread-list">
+          <tr>
+            <td bgcolor="#336600" width="55%" style="padding:3px 6px;"><font color="#fff" size="1" face="VERDANA"><b>Thread</b></font></td>
+            <td bgcolor="#336600" width="15%" align="center" style="padding:3px 6px;"><font color="#fff" size="1" face="VERDANA"><b>Replies</b></font></td>
+            <td bgcolor="#336600" width="30%" style="padding:3px 6px;"><font color="#fff" size="1" face="VERDANA"><b>Last Post</b></font></td>
+          </tr>
+          <tr><td colspan="3" style="padding:4px; font-family:Verdana; font-size:10px; color:#888;">Loading...</td></tr>
+        </table>
+
+        <!-- New Thread Form (hidden by default) -->
+        <div id="forum-new-thread-form" style="display:none; margin-top:8px; border:1px solid var(--clr-green); padding:6px;">
+          <table cellspacing="0" cellpadding="3" border="0" width="100%">
+            <tr>
+              <td bgcolor="#336600" colspan="2"><font color="#fff" face="VERDANA" size="1"><b>New Thread</b></font></td>
+            </tr>
+            <tr>
+              <td width="60px"><font color="#fff" face="VERDANA" size="1">Title:</font></td>
+              <td><input id="forum-new-title" type="text" maxlength="80"
+                style="background:#111; color:#fff; border:1px solid var(--clr-green); font-family:Verdana; font-size:11px; width:90%;"></td>
+            </tr>
+            <tr>
+              <td valign="top"><font color="#fff" face="VERDANA" size="1">Post:</font></td>
+              <td><textarea id="forum-new-body" rows="5" maxlength="2000"
+                style="background:#111; color:#fff; border:1px solid var(--clr-green); font-family:Verdana; font-size:11px; width:100%;"></textarea></td>
+            </tr>
+            <tr>
+              <td colspan="2">
+                <input type="button" value="Post Thread" onclick="submitForumThread()"
+                  style="background:var(--clr-green); color:#fff; border:1px solid var(--clr-yellow); font-family:Verdana; font-size:11px; padding:2px 10px; cursor:pointer;">
+                &nbsp;
+                <a href="#" class="link" onclick="hideForumNewThread()">Cancel</a>
+                <span id="forum-thread-status" style="margin-left:8px; color:var(--clr-yellow); font-family:Verdana; font-size:11px;"></span>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <hr class="green">
+        <div style="text-align:center; margin-top:6px;">
+          <a href="#" class="link" onclick="showPage('forums')">« Back to Forums</a>
+          &nbsp;&nbsp;
+          <a href="#" class="link" onclick="showPage('main')">« Main Menu</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORUMS — THREAD VIEW PAGE -->
+    <div class="page" id="page-forum-thread">
+      <div style="padding:8px 10px;">
+        <table width="100%" cellspacing="0" cellpadding="0" border="0">
+          <tr>
+            <td><font color="#ffcc00" size="+1" face="VERDANA"><b id="forum-thread-title">Thread</b></font></td>
+          </tr>
+        </table>
+        <hr class="green">
+        <div id="forum-posts-list"></div>
+
+        <!-- Reply Form -->
+        <div id="forum-reply-form" style="margin-top:8px; border:1px solid var(--clr-green); padding:6px;">
+          <table cellspacing="0" cellpadding="3" border="0" width="100%">
+            <tr>
+              <td bgcolor="#336600" colspan="2"><font color="#fff" face="VERDANA" size="1"><b>Reply</b></font></td>
+            </tr>
+            <tr>
+              <td valign="top"><font color="#fff" face="VERDANA" size="1">Post:</font></td>
+              <td><textarea id="forum-reply-body" rows="4" maxlength="2000"
+                style="background:#111; color:#fff; border:1px solid var(--clr-green); font-family:Verdana; font-size:11px; width:100%;"></textarea></td>
+            </tr>
+            <tr>
+              <td colspan="2">
+                <input type="button" value="Post Reply" onclick="submitForumReply()"
+                  style="background:var(--clr-green); color:#fff; border:1px solid var(--clr-yellow); font-family:Verdana; font-size:11px; padding:2px 10px; cursor:pointer;">
+                <span id="forum-reply-status" style="margin-left:8px; color:var(--clr-yellow); font-family:Verdana; font-size:11px;"></span>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <hr class="green">
+        <div style="text-align:center; margin-top:6px;">
+          <a href="#" class="link" id="forum-back-to-board" onclick="showPage('forum-board')">« Back to Board</a>
+          &nbsp;&nbsp;
+          <a href="#" class="link" onclick="showPage('forums')">« Forums</a>
+          &nbsp;&nbsp;
+          <a href="#" class="link" onclick="showPage('main')">« Main Menu</a>
+        </div>
       </div>
     </div>
 
@@ -3859,7 +3987,7 @@ document.addEventListener('input', function(e) {
 // ============================================================
 function showPage(name) {
   // Guard: if player is between rounds, only allow read-only/auth pages
-  const freePages = ['round-end', 'rankings', 'city-rankings', 'attack-rankings', 'gang-rankings', 'round-history', 'hall-of-fame', 'activate', 'login', 'signup'];
+  const freePages = ['round-end', 'rankings', 'city-rankings', 'attack-rankings', 'gang-rankings', 'round-history', 'hall-of-fame', 'forums', 'forum-board', 'forum-thread', 'activate', 'login', 'signup'];
   if (window._needsActivation && !freePages.includes(name)) {
     showPage('round-end');
     return;
@@ -3897,6 +4025,9 @@ function showPage(name) {
       });
     }
     if (name === 'hall-of-fame') loadHallOfFame();
+    if (name === 'forums') loadForumBoards();
+    if (name === 'forum-board') loadForumThreads();
+    if (name === 'forum-thread') loadForumPosts();
     if (name === 'round-end') {
       // Pull the most recent hall of fame entry to show the winner
       db.ref('hall_of_fame').orderByChild('ts').limitToLast(1).once('value', snap => {
@@ -4275,6 +4406,333 @@ function init() {
       showPage('login');
     }
   });
+}
+
+}
+
+// ============================================================
+// FORUMS
+// ============================================================
+const FORUM_BOARDS = [
+  { id: 'general',  name: 'General Chat',            desc: 'Anything goes.' },
+  { id: 'tips',     name: 'Tips & Tricks',            desc: 'Strategy, guides, and game knowledge.' },
+  { id: 'gang',     name: 'Gang Shit',                desc: 'Gang talk, recruitment, beef.' },
+  { id: 'bugs',     name: 'Bug Reports & Suggestions',desc: 'Found something broken? Got an idea?' },
+  { id: 'rules',    name: 'Rules & Guidelines',       desc: 'Read before you post.', adminOnly: true }
+];
+
+const FORUM_REPORT_THRESHOLD = 3;
+const FORUM_POST_CAP = 200;
+
+let _forumCurrentBoard = null;   // { id, name, adminOnly }
+let _forumCurrentThread = null;  // { id, title, boardId }
+
+// ── Board list ────────────────────────────────────────────────
+function loadForumBoards() {
+  const table = document.getElementById('forum-board-list');
+  if (!table) return;
+  // Rebuild header row
+  table.innerHTML = `<tr>
+    <td bgcolor="#336600" width="55%" style="padding:3px 6px;"><font color="#fff" size="1" face="VERDANA"><b>Board</b></font></td>
+    <td bgcolor="#336600" width="15%" align="center" style="padding:3px 6px;"><font color="#fff" size="1" face="VERDANA"><b>Threads</b></font></td>
+    <td bgcolor="#336600" width="30%" style="padding:3px 6px;"><font color="#fff" size="1" face="VERDANA"><b>Last Post</b></font></td>
+  </tr>`;
+
+  // Seed Rules board pinned post if it doesn't exist yet
+  db.ref('forums/rules/threads').orderByChild('pinned').equalTo(true).once('value', snap => {
+    if (!snap.exists()) seedRulesPinnedPost();
+  });
+
+  let done = 0;
+  FORUM_BOARDS.forEach((board, i) => {
+    db.ref('forums/' + board.id + '/threads').once('value', snap => {
+      const threads = [];
+      snap.forEach(child => threads.push(child.val()));
+      const count = threads.length;
+      let lastTs = 0, lastAuthor = '—';
+      threads.forEach(t => { if ((t.lastPostTs || t.ts || 0) > lastTs) { lastTs = t.lastPostTs || t.ts; lastAuthor = t.lastPostAuthor || t.authorName || '—'; } });
+      const dateStr = lastTs ? new Date(lastTs).toLocaleDateString() : '—';
+      const bg = i % 2 === 0 ? '#1a1a00' : '#0d0d00';
+      const tr = document.createElement('tr');
+      tr.style.background = bg;
+      tr.innerHTML = `
+        <td style="padding:4px 6px;">
+          <a href="#" class="link2" onclick="openForumBoard('${board.id}')"><b>${board.name}</b></a>
+          <div style="color:#888; font-size:10px; font-family:Verdana;">${board.desc}</div>
+        </td>
+        <td align="center" style="padding:4px 6px;"><font color="#ccc" size="1" face="VERDANA">${count}</font></td>
+        <td style="padding:4px 6px;"><font color="#ccc" size="1" face="VERDANA">${lastAuthor}<br>${dateStr}</font></td>`;
+      table.appendChild(tr);
+      done++;
+    });
+  });
+}
+
+function openForumBoard(boardId) {
+  _forumCurrentBoard = FORUM_BOARDS.find(b => b.id === boardId) || { id: boardId, name: boardId };
+  showPage('forum-board');
+}
+
+// ── Thread list ───────────────────────────────────────────────
+function loadForumThreads() {
+  const board = _forumCurrentBoard;
+  if (!board) return;
+
+  setText('forum-board-title', board.name);
+
+  // Hide new-thread button on adminOnly boards for non-admins
+  const isAdmin = currentUser && currentUser.email && currentUser.email.endsWith('@idlepimps.game') &&
+    G && (G.name === 'Admin' || G.isAdmin);
+  const btn = document.getElementById('forum-new-thread-btn');
+  if (btn) btn.style.display = (board.adminOnly && !isAdmin) ? 'none' : '';
+  hideForumNewThread();
+
+  const table = document.getElementById('forum-thread-list');
+  if (!table) return;
+  table.innerHTML = `<tr>
+    <td bgcolor="#336600" width="55%" style="padding:3px 6px;"><font color="#fff" size="1" face="VERDANA"><b>Thread</b></font></td>
+    <td bgcolor="#336600" width="15%" align="center" style="padding:3px 6px;"><font color="#fff" size="1" face="VERDANA"><b>Replies</b></font></td>
+    <td bgcolor="#336600" width="30%" style="padding:3px 6px;"><font color="#fff" size="1" face="VERDANA"><b>Last Post</b></font></td>
+  </tr>`;
+
+  db.ref('forums/' + board.id + '/threads').orderByChild('ts').once('value', snap => {
+    const threads = [];
+    snap.forEach(child => threads.push({ key: child.key, ...child.val() }));
+    threads.sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      return (b.lastPostTs || b.ts || 0) - (a.lastPostTs || a.ts || 0);
+    });
+
+    if (!threads.length) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td colspan="3" style="padding:6px; font-family:Verdana; font-size:10px; color:#888;">No threads yet. Be the first to post!</td>`;
+      table.appendChild(tr);
+      return;
+    }
+
+    threads.forEach((t, i) => {
+      const bg = i % 2 === 0 ? '#1a1a00' : '#0d0d00';
+      const pin = t.pinned ? '📌 ' : '';
+      const dateStr = (t.lastPostTs || t.ts) ? new Date(t.lastPostTs || t.ts).toLocaleDateString() : '—';
+      const lastBy = t.lastPostAuthor || t.authorName || '—';
+      const replies = Math.max(0, (t.replyCount || 1) - 1);
+      const tr = document.createElement('tr');
+      tr.style.background = bg;
+      tr.innerHTML = `
+        <td style="padding:4px 6px;">
+          ${pin}<a href="#" class="link2" onclick="openForumThread('${t.key}','${escHtml(t.title)}')"><b>${escHtml(t.title)}</b></a>
+          <div style="color:#888; font-size:10px; font-family:Verdana;">by ${escHtml(t.authorName || '?')}</div>
+        </td>
+        <td align="center" style="padding:4px 6px;"><font color="#ccc" size="1" face="VERDANA">${replies}</font></td>
+        <td style="padding:4px 6px;"><font color="#ccc" size="1" face="VERDANA">${escHtml(lastBy)}<br>${dateStr}</font></td>`;
+      table.appendChild(tr);
+    });
+  });
+}
+
+function showForumNewThread() {
+  const f = document.getElementById('forum-new-thread-form');
+  if (f) { f.style.display = ''; document.getElementById('forum-new-title').focus(); }
+}
+function hideForumNewThread() {
+  const f = document.getElementById('forum-new-thread-form');
+  if (f) f.style.display = 'none';
+  const s = document.getElementById('forum-thread-status');
+  if (s) s.textContent = '';
+}
+
+function submitForumThread() {
+  if (!currentUser || !G) { notify('You must be logged in.'); return; }
+  const board = _forumCurrentBoard;
+  if (!board) return;
+  const title = (document.getElementById('forum-new-title').value || '').trim();
+  const body  = (document.getElementById('forum-new-body').value  || '').trim();
+  const status = document.getElementById('forum-thread-status');
+  if (!title) { status.textContent = 'Enter a title.'; return; }
+  if (!body)  { status.textContent = 'Enter a post body.'; return; }
+  if (title.length > 80)   { status.textContent = 'Title too long (max 80 chars).'; return; }
+  if (body.length > 2000)  { status.textContent = 'Post too long (max 2000 chars).'; return; }
+
+  status.textContent = 'Posting...';
+  const now = Date.now();
+  const threadRef = db.ref('forums/' + board.id + '/threads').push();
+  const threadId = threadRef.key;
+  const threadData = {
+    title, authorName: G.name, authorUid: currentUser.uid,
+    ts: now, replyCount: 1, lastPostTs: now, lastPostAuthor: G.name, pinned: false
+  };
+  threadRef.set(threadData).then(() => {
+    return db.ref('forums/' + board.id + '/threads/' + threadId + '/posts').push({
+      body, authorName: G.name, authorUid: currentUser.uid, ts: now, reports: []
+    });
+  }).then(() => {
+    status.textContent = '';
+    document.getElementById('forum-new-title').value = '';
+    document.getElementById('forum-new-body').value = '';
+    hideForumNewThread();
+    loadForumThreads();
+  }).catch(e => { status.textContent = 'Error: ' + e.message; });
+}
+
+// ── Thread view ───────────────────────────────────────────────
+function openForumThread(threadId, title) {
+  _forumCurrentThread = { id: threadId, title, boardId: _forumCurrentBoard ? _forumCurrentBoard.id : 'general' };
+  showPage('forum-thread');
+}
+
+function loadForumPosts() {
+  const thread = _forumCurrentThread;
+  if (!thread) return;
+  setText('forum-thread-title', thread.title);
+
+  // Show/hide reply form — no replies on rules board for non-admins
+  const isAdmin = currentUser && G && (G.name === 'Admin' || G.isAdmin);
+  const board = FORUM_BOARDS.find(b => b.id === thread.boardId) || {};
+  const replyForm = document.getElementById('forum-reply-form');
+  if (replyForm) replyForm.style.display = (board.adminOnly && !isAdmin) ? 'none' : '';
+
+  const container = document.getElementById('forum-posts-list');
+  if (!container) return;
+  container.innerHTML = '<font color="#888" size="1" face="VERDANA">Loading...</font>';
+
+  db.ref('forums/' + thread.boardId + '/threads/' + thread.id + '/posts')
+    .orderByChild('ts').once('value', snap => {
+    const posts = [];
+    snap.forEach(child => posts.push({ key: child.key, ...child.val() }));
+
+    if (!posts.length) {
+      container.innerHTML = '<font color="#888" size="1" face="VERDANA">No posts.</font>';
+      return;
+    }
+
+    const myUid = currentUser ? currentUser.uid : null;
+    const isAdm = isAdmin;
+
+    container.innerHTML = posts.map((p, i) => {
+      const bg = i % 2 === 0 ? '#1a1a00' : '#0d0d00';
+      const d = new Date(p.ts);
+      const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      const canDelete = isAdm || (myUid && p.authorUid === myUid);
+      const alreadyReported = myUid && Array.isArray(p.reports) && p.reports.includes(myUid);
+      const reportCount = Array.isArray(p.reports) ? p.reports.length : 0;
+      const actions = [];
+      if (canDelete) actions.push(`<a href="#" class="link" style="color:#cc0033;" onclick="deleteForumPost('${p.key}',false)">Delete</a>`);
+      if (!alreadyReported && !canDelete) actions.push(`<a href="#" class="link" style="color:#888;" onclick="reportForumPost('${p.key}')">Report${reportCount>0?' ('+reportCount+')':''}</a>`);
+      return `<table width="100%" cellspacing="0" cellpadding="0" border="0" style="background:${bg}; margin-bottom:2px;">
+        <tr>
+          <td style="padding:4px 6px; border-bottom:1px solid #222;">
+            <font color="var(--clr-yellow)" size="1" face="VERDANA"><b>${escHtml(p.authorName || '?')}</b></font>
+            <font color="#666" size="1" face="VERDANA"> — ${dateStr}</font>
+            ${actions.length ? '<span style="float:right; font-size:10px; font-family:Verdana;">' + actions.join(' &nbsp; ') + '</span>' : ''}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:6px 8px; font-family:Verdana; font-size:11px; color:#eee; white-space:pre-wrap;">${escHtml(p.body || '')}</td>
+        </tr>
+      </table>`;
+    }).join('');
+  });
+}
+
+function submitForumReply() {
+  if (!currentUser || !G) { notify('You must be logged in.'); return; }
+  const thread = _forumCurrentThread;
+  if (!thread) return;
+  const body = (document.getElementById('forum-reply-body').value || '').trim();
+  const status = document.getElementById('forum-reply-status');
+  if (!body) { status.textContent = 'Enter a reply.'; return; }
+  if (body.length > 2000) { status.textContent = 'Too long (max 2000 chars).'; return; }
+
+  // Check post cap
+  db.ref('forums/' + thread.boardId + '/threads/' + thread.id + '/posts')
+    .once('value', snap => {
+    if (snap.numChildren() >= FORUM_POST_CAP) {
+      status.textContent = 'This thread has reached the ' + FORUM_POST_CAP + '-post limit.';
+      return;
+    }
+    status.textContent = 'Posting...';
+    const now = Date.now();
+    db.ref('forums/' + thread.boardId + '/threads/' + thread.id + '/posts').push({
+      body, authorName: G.name, authorUid: currentUser.uid, ts: now, reports: []
+    }).then(() => {
+      // Update thread metadata
+      db.ref('forums/' + thread.boardId + '/threads/' + thread.id).update({
+        lastPostTs: now, lastPostAuthor: G.name
+      });
+      db.ref('forums/' + thread.boardId + '/threads/' + thread.id + '/replyCount')
+        .transaction(c => (c || 1) + 1);
+      status.textContent = '';
+      document.getElementById('forum-reply-body').value = '';
+      loadForumPosts();
+    }).catch(e => { status.textContent = 'Error: ' + e.message; });
+  });
+}
+
+// ── Delete / Report ───────────────────────────────────────────
+function deleteForumPost(postKey, isThread) {
+  const thread = _forumCurrentThread;
+  if (!thread) return;
+  if (!confirm('Delete this post?')) return;
+  db.ref('forums/' + thread.boardId + '/threads/' + thread.id + '/posts/' + postKey).remove()
+    .then(() => loadForumPosts())
+    .catch(e => notify('Error: ' + e.message));
+}
+
+function reportForumPost(postKey) {
+  if (!currentUser) return;
+  const thread = _forumCurrentThread;
+  if (!thread) return;
+  const ref = db.ref('forums/' + thread.boardId + '/threads/' + thread.id + '/posts/' + postKey + '/reports');
+  ref.once('value', snap => {
+    const reports = snap.val() || [];
+    if (reports.includes(currentUser.uid)) { notify('Already reported.'); return; }
+    reports.push(currentUser.uid);
+    if (reports.length >= FORUM_REPORT_THRESHOLD) {
+      // Auto-delete
+      db.ref('forums/' + thread.boardId + '/threads/' + thread.id + '/posts/' + postKey).remove()
+        .then(() => { notify('Post removed by community reports.'); loadForumPosts(); });
+    } else {
+      ref.set(reports).then(() => { notify('Reported.'); loadForumPosts(); });
+    }
+  });
+}
+
+// ── Rules board seed ──────────────────────────────────────────
+function seedRulesPinnedPost() {
+  const now = Date.now();
+  const threadRef = db.ref('forums/rules/threads').push();
+  const threadId = threadRef.key;
+  const rulesBody =
+`Welcome to Pimp City Forums.
+
+A few rules to keep this place running smooth:
+
+1. No slurs. Period. Trash talk is fine. Slurs are not.
+2. No doxxing, no real personal info about other players.
+3. One account per person. Don't post on behalf of a banned pimp.
+4. Bugs go in Bug Reports & Suggestions. Don't clog General with them.
+5. Respect the game. Don't post exploits publicly — message Admin directly.
+
+Posts with 3+ reports get auto-deleted. Repeat offenders get banned.
+
+Have fun and go pimp.
+— Admin`;
+
+  threadRef.set({
+    title: 'Rules & Guidelines — Read Before Posting',
+    authorName: 'Admin', authorUid: 'admin',
+    ts: now, replyCount: 1, lastPostTs: now, lastPostAuthor: 'Admin', pinned: true
+  }).then(() => {
+    db.ref('forums/rules/threads/' + threadId + '/posts').push({
+      body: rulesBody, authorName: 'Admin', authorUid: 'admin', ts: now, reports: []
+    });
+  });
+}
+
+// ── Utility ───────────────────────────────────────────────────
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 window.addEventListener('load', init);
