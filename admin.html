@@ -545,11 +545,14 @@ function confirmNewRound() {
     '☠ START NEW ROUND',
     'This will archive current standings, record the winner to Hall of Fame, then increment roundId. Every player will see the activation screen on next login and their assets will reset. This CANNOT be undone.',
     () => {
+      addLog('Starting new round sequence...');
       db.ref('tick/roundId').once('value', snap => {
         const current = snap.val() || 1;
         const next = current + 1;
+        addLog('Current roundId: ' + current + ' → next: ' + next);
         // Step 1: archive current round standings
         db.ref('players').once('value', allSnap => {
+          addLog('Players snapshot received, count: ' + allSnap.numChildren());
           const sorted = [];
           allSnap.forEach(child => {
             const p = child.val();
