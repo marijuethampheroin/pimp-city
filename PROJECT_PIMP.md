@@ -1,6 +1,6 @@
 # Project Pimp — Master Document
 > README + Changelog + Handoff in one file.
-> Last updated: April 20, 2026.
+> Last updated: April 22, 2026.
 
 ---
 
@@ -510,6 +510,17 @@ dopewars/
   alongside `p.name` and `p.city`.
 
 
+### v0.16 — Admin Fixes (April 22, 2026)
+- **`confirmNewRound()` now archives before incrementing:** was silently skipping archival
+  entirely — just incremented `roundId` and set a new `roundEndTime`. Now matches the
+  automatic round-end: archives all players to `round_history/{roundId}`, records winner
+  to `hall_of_fame`, increments winner's `wins`, then increments `roundId`.
+  Step-by-step logging added to Session Log for visual confirmation on future manual resets.
+- **All confirm modal actions were silently broken:** `executeConfirmedAction()` called
+  `closeModal()` before checking `pendingAction` — `closeModal` nulls the reference, so
+  the action never ran. Fixed by saving the reference before closing the modal. Affected
+  Force Tick, Start New Round, Disable Account, and Permanently Delete.
+
 ### v0.15 — Forums (April 20, 2026)
 - **Forums section added:** 3-tier navigation — board list → thread list → thread view.
   Accessible from the right column nav (between Hall of Fame and Casino). Whitelisted
@@ -567,6 +578,14 @@ dopewars/
       but the money doesn't land in any treasury. No shared gang balance exists yet.
 - [ ] **Kevlar Vest combat bonus not wired** — Vests confirmed to give a defensive
       advantage in combat, but `doAttack()` doesn't factor vest count into outcomes.
+- [ ] **Steal Hoes requires 0 thugs — wrong** — `doStealHoes()` returns early if
+      `target.thugs > 0`, making it nearly impossible to steal hoes in practice.
+      The real game doesn't require zeroing first — crack amount + hoe happiness
+      should determine success, with thugs reducing effectiveness, not blocking entirely.
+- [ ] **Thugs never drop below 1** — attacking a target repeatedly kills the same
+      thug over and over; they never reach 0. Either a floor bug in the combat math
+      or the Firebase write after combat isn't persisting (so it resets to saved value
+      on the next read). Means zeroing is impossible and Steal Hoes is doubly broken.
 
 ### Confirmed Non-Bugs (previously listed as bugs)
 - **Weed/beer never consumed** — this is correct behavior. Confirmed from live
