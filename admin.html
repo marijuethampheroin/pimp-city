@@ -819,8 +819,9 @@ function executeConfirmedAction() {
     setTimeout(() => document.getElementById('modal-input').style.borderColor = '#336600', 1000);
     return;
   }
+  const action = pendingAction;
   closeModal();
-  if (pendingAction) pendingAction();
+  if (action) action();
 }
 document.getElementById('modal-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') executeConfirmedAction();
