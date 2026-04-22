@@ -225,7 +225,7 @@ label { color: #aaa; font-size: 11px; font-family: Verdana; }
         </div>
         <div id="danger-zone-body">
           <p style="color:#666; font-size:11px; font-family:Verdana; margin-bottom:10px; line-height:1.6;">
-            Starting a new round increments roundId — every player will see the activation screen on next login and their assets will reset.
+            Archives current standings to round history, records the winner to Hall of Fame, then increments roundId — every player will see the activation screen on next login and their assets will reset.
           </p>
           <button class="btn red" onclick="confirmNewRound()">☠ Start New Round</button>
         </div>
@@ -543,18 +543,46 @@ function forceTick() {
 function confirmNewRound() {
   openModal(
     '☠ START NEW ROUND',
-    'This will increment roundId. Every player will see the activation screen on next login and their assets will reset to default. This CANNOT be undone.',
+    'This will archive current standings, record the winner to Hall of Fame, then increment roundId. Every player will see the activation screen on next login and their assets will reset. This CANNOT be undone.',
     () => {
       db.ref('tick/roundId').once('value', snap => {
         const current = snap.val() || 1;
         const next = current + 1;
-        db.ref('tick').update({
-          roundId: next,
-          roundEndTime: Date.now() + 7 * 86400000
-        }, err => {
-          if (err) { addLog('New round failed: ' + err.message, true); return; }
-          addLog('NEW ROUND started. roundId is now ' + next, true);
-          refreshTickInfo();
+        // Step 1: archive current round standings
+        db.ref('players').once('value', allSnap => {
+          const sorted = [];
+          allSnap.forEach(child => {
+            const p = child.val();
+            const pnw = (p.cash||0)+(p.hoes||0)*250+(p.thugs||0)*1000+(p.rides||0)*1000+(p.crack||0)*2;
+            sorted.push({ uid: child.key, data: p, nw: pnw });
+          });
+          sorted.sort((a, b) => b.nw - a.nw);
+          const archivePlayers = {};
+          sorted.forEach((entry, i) => {
+            archivePlayers[entry.uid] = Object.assign({}, entry.data, { finalRank: i + 1, finalNW: entry.nw });
+          });
+          db.ref('round_history/' + current).set({ endedAt: Date.now(), roundId: current, players: archivePlayers }, err => {
+            if (err) { addLog('Archive failed: ' + err.message, true); return; }
+            addLog('Archived round ' + current + ' — ' + sorted.length + ' players.');
+            // Step 2: record winner to hall of fame
+            if (sorted.length > 0) {
+              const winner = sorted[0];
+              db.ref('hall_of_fame').push({ name: winner.data.name, id: winner.data.id || 0, nw: winner.nw, ts: Date.now(), roundId: current });
+              db.ref('players').orderByChild('id').equalTo(winner.data.id).once('value', s2 => {
+                s2.forEach(c => db.ref('players/' + c.key + '/wins').transaction(w => (w||0)+1));
+              });
+              addLog('Hall of Fame: ' + (winner.data.name||'?') + ' wins round ' + current + ' with $' + fmt(winner.nw), true);
+            }
+            // Step 3: start new round
+            db.ref('tick').update({
+              roundId: next,
+              roundEndTime: Date.now() + 7 * 86400000
+            }, err2 => {
+              if (err2) { addLog('New round failed: ' + err2.message, true); return; }
+              addLog('NEW ROUND started. roundId is now ' + next, true);
+              refreshTickInfo();
+            });
+          });
         });
       });
     }
