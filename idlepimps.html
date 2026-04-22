@@ -2592,6 +2592,14 @@ function doAttack(e) {
     cash: target.cash,
     rides: target.rides
   });
+  // Update cached player so repeat attacks see current values
+  const ci = cachedPlayers.findIndex(p => p.uid === target.uid);
+  if (ci !== -1) {
+    cachedPlayers[ci].thugs = target.thugs;
+    cachedPlayers[ci].hoes  = target.hoes;
+    cachedPlayers[ci].cash  = target.cash;
+    cachedPlayers[ci].rides = target.rides;
+  }
 
   // Log the attack to Firebase for the target's console
   db.ref('attacks').push({
@@ -2696,26 +2704,27 @@ function doDriveBy(target) {
 function doStealHoes(target, crackSent) {
   if (crackSent > G.crack) { return '<b>You don\'t have that much crack!</b>'; }
 
-  // Use crackulator formula in reverse to determine hoes stolen
+  // Use crackulator formula to determine optimal crack amount
   const tnw = getNetWorth(target);
   const crackEstimate = Math.max(0, (tnw - target.hoes*250 - target.thugs*1000 - target.rides*1000) / 2);
   const crackToSend = Math.floor(crackEstimate / 6.6);
 
-  if (target.thugs > 0) {
-    G.crack -= crackSent;
-    return `<b>Steal Hoes - ${target.name}(#${target.id})</b><br><br>${target.name} has too many thugs watching! The hoes won't leave.<br>Try killing the thugs first with a Home Invasion.`;
-  }
-
   G.crack -= crackSent;
 
   const hoesHappiness = Math.min(100, (target.crack / Math.max(1, target.hoes * 10)) * 100);
-  if (hoesHappiness >= 100 && crackSent < crackToSend * 0.5) {
-    return `<b>Steal Hoes - ${target.name}(#${target.id})</b><br><br>${target.name}'s hoes are too happy to leave. Try sending more crack, or run the Crack-u-lator.`;
+
+  // Thugs reduce steal effectiveness but don't block it entirely
+  // 4 thugs per hoe = full protection; below that ratio hoes are exposed
+  const thugProtection = Math.min(1, target.thugs / Math.max(1, target.hoes * 4));
+  const exposedFraction = 1 - thugProtection;
+
+  if (exposedFraction <= 0.05 && hoesHappiness >= 100) {
+    return `<b>Steal Hoes - ${target.name}(#${target.id})</b><br><br>${target.name}'s hoes are too well protected and too happy to leave.`;
   }
 
-  // Hoes stolen based on crack sent vs optimal
+  // Hoes stolen based on crack sent vs optimal, reduced by thug protection
   const ratio = Math.min(1.5, crackSent / Math.max(1, crackToSend));
-  const maxStealable = Math.floor(target.hoes * 0.4);
+  const maxStealable = Math.floor(target.hoes * 0.4 * exposedFraction);
   const stolenHoes = Math.min(target.hoes, Math.floor(maxStealable * Math.min(1, ratio)));
 
   target.hoes -= stolenHoes;
