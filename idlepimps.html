@@ -719,7 +719,10 @@ body.alt-theme #rh-select { border-color: var(--clr-green) !important; }
         &bull; Upcoming PvP and gang features<br>
         <br>
         <b style="color:#fff;">Pimp City</b><br>
-        &bull; Hoe burn mechanic: hoes die if tricks are turned without condoms (formula TBD)<br>
+        &bull; Hoe burn mechanic: hoes hospitalized (STIs) if no condoms; hoes leave for rehab if no crack; rate rises with consecutive dry turns; bonus % if both missing<br>
+        &bull; "Again?" button on Turn Tricks result page (repeats last turn)<br>
+        &bull; idle-Mart buy/sell inputs now start blank (no default 0)<br>
+        &bull; [33%] [66%] [Max] quick-fill buttons on all buy items; total shows "Insufficient funds..." if over cash<br>
         &bull; Quick-sell condoms button<br>
         &bull; Quick-buy crack button (10 crack per hoe, for restocking between trick-turning sessions)<br>
         &bull; Fix Crack-u-lator formula (estimated crack needed to steal hoes)<br>
@@ -792,6 +795,7 @@ body.alt-theme #rh-select { border-color: var(--clr-green) !important; }
     <!-- TURNED TRICKS RESULT PAGE -->
     <div id="page-turned" class="page">
       <div class="turn-result" id="turn-result-text"></div>
+      <div id="turn-sti-msg" style="text-align:center; font-family:Verdana; font-size:12px; font-weight:bold; color:#cc0000; padding:2px 6px;"></div>
       <div style="text-align:center; margin: 6px 0;">
         <div class="stat-box" style="max-width:500px;">
           <div class="stat-row" style="border-bottom:1px solid #ccc;">
@@ -803,6 +807,7 @@ body.alt-theme #rh-select { border-color: var(--clr-green) !important; }
         </div>
       </div>
       <div style="text-align:center;">
+        <input type="button" value="Again?" onclick="doTurnAgain()" style="margin-right:10px;">
         <a href="#" class="link" onclick="showPage('main')"><b>Main Menu</b></a>
       </div>
     </div>
@@ -816,16 +821,16 @@ body.alt-theme #rh-select { border-color: var(--clr-green) !important; }
       <form onsubmit="return doBuy(event)">
         <table class="shop-table" id="buy-table">
           <tr style="border-bottom:1px solid #555;">
-            <td><b>Qty</b></td><td><b>Name</b></td><td><b>Price</b></td>
+            <td><b>Qty</b></td><td><b>Name</b></td><td><b>Price</b></td><td></td>
           </tr>
-          <tr><td><input type="number" id="buy-beer" min="0" value="0"></td><td>Beer</td><td>$2</td></tr>
-          <tr><td><input type="number" id="buy-condoms" min="0" value="0"></td><td>Condoms</td><td>$1</td></tr>
-          <tr><td><input type="number" id="buy-crack" min="0" value="0"></td><td>Crack</td><td>$10</td></tr>
-          <tr><td><input type="number" id="buy-weed" min="0" value="0"></td><td>Weed</td><td>$25</td></tr>
-          <tr><td><input type="number" id="buy-ak" min="0" value="0"></td><td>AK-47</td><td>$1,500</td></tr>
-          <tr><td><input type="number" id="buy-vest" min="0" value="0"></td><td>Kevlar Vest</td><td>$5,500</td></tr>
-          <tr><td><input type="number" id="buy-thug" min="0" value="0"></td><td>Thug</td><td>$2,500</td></tr>
-          <tr><td><input type="number" id="buy-ride" min="0" value="0"></td><td>Lowrider</td><td>$2,500</td></tr>
+          <tr><td><input type="number" id="buy-beer" min="0" value=""></td><td>Beer</td><td>$2</td><td><button type="button" onclick="setBuyPct('beer',0.33)">[33%]</button> <button type="button" onclick="setBuyPct('beer',0.66)">[66%]</button> <button type="button" onclick="setBuyPct('beer',1)">[Max]</button></td></tr>
+          <tr><td><input type="number" id="buy-condoms" min="0" value=""></td><td>Condoms</td><td>$1</td><td><button type="button" onclick="setBuyPct('condoms',0.33)">[33%]</button> <button type="button" onclick="setBuyPct('condoms',0.66)">[66%]</button> <button type="button" onclick="setBuyPct('condoms',1)">[Max]</button></td></tr>
+          <tr><td><input type="number" id="buy-crack" min="0" value=""></td><td>Crack</td><td>$10</td><td><button type="button" onclick="setBuyPct('crack',0.33)">[33%]</button> <button type="button" onclick="setBuyPct('crack',0.66)">[66%]</button> <button type="button" onclick="setBuyPct('crack',1)">[Max]</button></td></tr>
+          <tr><td><input type="number" id="buy-weed" min="0" value=""></td><td>Weed</td><td>$25</td><td><button type="button" onclick="setBuyPct('weed',0.33)">[33%]</button> <button type="button" onclick="setBuyPct('weed',0.66)">[66%]</button> <button type="button" onclick="setBuyPct('weed',1)">[Max]</button></td></tr>
+          <tr><td><input type="number" id="buy-ak" min="0" value=""></td><td>AK-47</td><td>$1,500</td><td><button type="button" onclick="setBuyPct('ak',0.33)">[33%]</button> <button type="button" onclick="setBuyPct('ak',0.66)">[66%]</button> <button type="button" onclick="setBuyPct('ak',1)">[Max]</button></td></tr>
+          <tr><td><input type="number" id="buy-vest" min="0" value=""></td><td>Kevlar Vest</td><td>$5,500</td><td><button type="button" onclick="setBuyPct('vest',0.33)">[33%]</button> <button type="button" onclick="setBuyPct('vest',0.66)">[66%]</button> <button type="button" onclick="setBuyPct('vest',1)">[Max]</button></td></tr>
+          <tr><td><input type="number" id="buy-thug" min="0" value=""></td><td>Thug</td><td>$2,500</td><td><button type="button" onclick="setBuyPct('thug',0.33)">[33%]</button> <button type="button" onclick="setBuyPct('thug',0.66)">[66%]</button> <button type="button" onclick="setBuyPct('thug',1)">[Max]</button></td></tr>
+          <tr><td><input type="number" id="buy-ride" min="0" value=""></td><td>Lowrider</td><td>$2,500</td><td><button type="button" onclick="setBuyPct('ride',0.33)">[33%]</button> <button type="button" onclick="setBuyPct('ride',0.66)">[66%]</button> <button type="button" onclick="setBuyPct('ride',1)">[Max]</button></td></tr>
         </table>
         <div style="text-align:center; margin-top:6px; font-family:Verdana; font-size:12px; color:#fff; font-weight:bold;">
           Total: $<span id="buy-total">0</span>
@@ -843,37 +848,37 @@ body.alt-theme #rh-select { border-color: var(--clr-green) !important; }
         <table class="shop-table">
           <tr><td><b>Qty</b></td><td><b>Name</b></td><td><b>Worth</b></td><td><b>You Have</b></td></tr>
           <tr>
-            <td><input type="number" id="sell-beer" min="0" value="0"></td>
+            <td><input type="number" id="sell-beer" min="0" value=""></td>
             <td>Beer</td><td>$1</td>
             <td id="sell-beer-have">0</td>
           </tr>
           <tr>
-            <td><input type="number" id="sell-crack" min="0" value="0"></td>
+            <td><input type="number" id="sell-crack" min="0" value=""></td>
             <td>Crack</td><td>$4</td>
             <td id="sell-crack-have">0</td>
           </tr>
           <tr>
-            <td><input type="number" id="sell-weed" min="0" value="0"></td>
+            <td><input type="number" id="sell-weed" min="0" value=""></td>
             <td>Weed</td><td>$15</td>
             <td id="sell-weed-have">0</td>
           </tr>
           <tr>
-            <td><input type="number" id="sell-ak" min="0" value="0"></td>
+            <td><input type="number" id="sell-ak" min="0" value=""></td>
             <td>AK-47</td><td>$850</td>
             <td id="sell-ak-have">0</td>
           </tr>
           <tr>
-            <td><input type="number" id="sell-vest" min="0" value="0"></td>
+            <td><input type="number" id="sell-vest" min="0" value=""></td>
             <td>Kevlar Vest</td><td>$3,000</td>
             <td id="sell-vest-have">0</td>
           </tr>
           <tr>
-            <td><input type="number" id="sell-thug" min="0" value="0"></td>
+            <td><input type="number" id="sell-thug" min="0" value=""></td>
             <td>Thug</td><td>$1,000</td>
             <td id="sell-thug-have">0</td>
           </tr>
           <tr>
-            <td><input type="number" id="sell-ride" min="0" value="0"></td>
+            <td><input type="number" id="sell-ride" min="0" value=""></td>
             <td>Lowrider</td><td>$1,000</td>
             <td id="sell-ride-have">0</td>
           </tr>
@@ -1849,7 +1854,24 @@ function loadFromFirebase(uid, callback) {
     } else {
       G = defaultGame();
     }
-    callback();
+    // Apply any pending attack outcomes written by attackers.
+    // Direct writes to a target's player record are blocked by Firebase rules
+    // (players can only write their own record), so attackers write deltas here
+    // instead and the target applies them on next load.
+    db.ref('attack_outcomes/' + uid).once('value', outcomes => {
+      let hasOutcomes = false;
+      outcomes.forEach(snap => {
+        const o = snap.val();
+        G.thugs = Math.max(0, (G.thugs || 0) + (o.thugDelta || 0));
+        G.hoes  = Math.max(0, (G.hoes  || 0) + (o.hoeDelta  || 0));
+        G.cash  = Math.max(0, (G.cash  || 0) + (o.cashDelta || 0));
+        G.rides = Math.max(0, (G.rides || 0) + (o.rideDelta || 0));
+        snap.ref.remove();
+        hasOutcomes = true;
+      });
+      if (hasOutcomes) saveGame();
+      callback();
+    });
   });
 }
 
@@ -2389,6 +2411,38 @@ function doTurnTricks(e) {
   result += `<b>Your hoes used ${fmt(condomsActual)} condoms and smoked ${fmt(crackActual)} crack rocks!</b><br>`;
   if (condomsActual > 0 && crackActual > 0) result += `<b>Your consumption ratio is ${consumeRatio}</b>`;
 
+  // ── Hoe attrition: no condoms = STI hospitalizations, no crack = rehab departures ──
+  const noCondoms = G.condoms <= 0;
+  const noCrack   = G.crack   <= 0;
+  if (noCondoms || noCrack) {
+    G.consecutiveDryTurns = (G.consecutiveDryTurns || 0) + turnsInput;
+  } else {
+    G.consecutiveDryTurns = 0;
+  }
+  let hospiHoes = 0, rehabHoes = 0;
+  if (noCondoms && G.hoes > 1) {
+    const rate  = Math.min(0.02 + (G.consecutiveDryTurns - 1) * 0.005, 0.15) + (noCrack ? 0.02 : 0);
+    hospiHoes   = Math.min(Math.floor(G.hoes * rate), G.hoes - 1);
+    G.hoes     -= hospiHoes;
+    G.stats.hoesKilled = (G.stats.hoesKilled || 0) + hospiHoes;
+  }
+  if (noCrack && G.hoes > 1) {
+    const rate  = Math.min(0.03 + (G.consecutiveDryTurns - 1) * 0.007, 0.20) + (noCondoms ? 0.02 : 0);
+    rehabHoes   = Math.min(Math.floor(G.hoes * rate), G.hoes - 1);
+    G.hoes     -= rehabHoes;
+    G.stats.hoesLost = (G.stats.hoesLost || 0) + rehabHoes;
+  }
+
+  // Store last turn args for Again? button
+  window._lastTurnTurns = turnsInput;
+  window._lastTurnLoc   = loc;
+
+  const stiEl = document.getElementById('turn-sti-msg');
+  let stiHtml = '';
+  if (hospiHoes > 0) stiHtml += `${fmt(hospiHoes)} hoes have been hospitalized due to STIs.<br>`;
+  if (rehabHoes > 0) stiHtml += `${fmt(rehabHoes)} hoes have left for rehab.<br>`;
+  if (stiEl) stiEl.innerHTML = stiHtml;
+
   document.getElementById('turn-result-text').innerHTML = result;
 
   // Update turned result stat row
@@ -2414,6 +2468,15 @@ function doTurnTricks(e) {
   saveGame();
   showPage('turned');
   return false;
+}
+
+function doTurnAgain() {
+  const turns = window._lastTurnTurns || 1;
+  const loc   = window._lastTurnLoc   || G.city;
+  if (turns > G.turns) { notify('Not enough turns!'); return; }
+  document.getElementById('tt-turns').value    = turns;
+  document.getElementById('tt-location').value = loc;
+  doTurnTricks({ preventDefault: () => {} });
 }
 
 function doBuy(e) {
@@ -2455,7 +2518,7 @@ function doBuy(e) {
 
   // Reset inputs
   ['buy-beer','buy-condoms','buy-crack','buy-weed','buy-ak','buy-vest','buy-thug','buy-ride'].forEach(id => {
-    document.getElementById(id).value = 0;
+    document.getElementById(id).value = '';
   });
 
   G.history.unshift({time: new Date().toLocaleString(), event: `Bought items at idle-Mart for $${fmt(total)}`});
@@ -2574,6 +2637,12 @@ function doAttack(e) {
   const msg = document.getElementById('atk-msg').value;
   let resultHTML = '';
 
+  // Capture originals before attack functions mutate target
+  const tThugsOrig = target.thugs;
+  const tHoesOrig  = target.hoes;
+  const tCashOrig  = target.cash;
+  const tRidesOrig = target.rides;
+
   if (type.value === 'home') {
     resultHTML = doHomeInvasion(target);
   } else if (type.value === 'driveby') {
@@ -2585,13 +2654,22 @@ function doAttack(e) {
     resultHTML = doJackRides(target);
   }
 
-  // Write target's updated record back to Firebase
-  db.ref('players/' + target.uid).update({
-    thugs: target.thugs,
-    hoes: target.hoes,
-    cash: target.cash,
-    rides: target.rides
-  });
+  // Push delta to attack_outcomes so target applies it on next load.
+  // (Direct writes to target's player node fail silently — Firebase rules
+  //  only allow players to write their own record.)
+  const thugDelta = target.thugs - tThugsOrig;
+  const hoeDelta  = target.hoes  - tHoesOrig;
+  const cashDelta = target.cash  - tCashOrig;
+  const rideDelta = target.rides - tRidesOrig;
+  console.log('[ATTACK DELTA]', { thugDelta, hoeDelta, cashDelta, rideDelta, targetUid: target.uid });
+  if (thugDelta !== 0 || hoeDelta !== 0 || cashDelta !== 0 || rideDelta !== 0) {
+    console.log('[ATTACK DELTA] pushing to attack_outcomes/' + target.uid);
+    db.ref('attack_outcomes/' + target.uid).push({
+      thugDelta, hoeDelta, cashDelta, rideDelta,
+      fromUid: currentUser.uid,
+      ts: Date.now()
+    });
+  }
   // Update cached player so repeat attacks see current values
   const ci = cachedPlayers.findIndex(p => p.uid === target.uid);
   if (ci !== -1) {
@@ -3987,9 +4065,25 @@ document.addEventListener('input', function(e) {
       const v = parseInt(document.getElementById(id)?.value)||0;
       total += v * price;
     }
-    setText('buy-total', fmt(total));
+    const totalEl = document.getElementById('buy-total');
+    if (G && total > G.cash) {
+      totalEl.textContent = 'Insufficient funds...';
+      totalEl.style.color = '#cc0000';
+    } else {
+      totalEl.textContent = fmt(total);
+      totalEl.style.color = '';
+    }
   }
 });
+
+function setBuyPct(key, pct) {
+  const prices = {beer:2,condoms:1,crack:10,weed:25,ak:1500,vest:5500,thug:2500,ride:2500};
+  const price = prices[key];
+  if (!price || !G || G.cash == null) return;
+  const qty = Math.floor(G.cash * pct / price);
+  const el = document.getElementById('buy-' + key);
+  if (el) { el.value = qty; el.dispatchEvent(new Event('input', {bubbles:true})); }
+}
 
 // ============================================================
 // PAGE NAVIGATION
@@ -4396,6 +4490,24 @@ function init() {
               updateAllDisplays();
               if (tickInterval) clearInterval(tickInterval);
               startTicker();
+              // Real-time listener for incoming attacks while online.
+              // Only picks up outcomes written after login (startAt loginTime)
+              // so we don't double-apply anything loadFromFirebase already consumed.
+              const loginTime = Date.now();
+              db.ref('attack_outcomes/' + user.uid)
+                .orderByChild('ts').startAt(loginTime)
+                .on('child_added', snap => {
+                  const o = snap.val();
+                  if (!o) return;
+                  G.thugs = Math.max(0, (G.thugs || 0) + (o.thugDelta || 0));
+                  G.hoes  = Math.max(0, (G.hoes  || 0) + (o.hoeDelta  || 0));
+                  G.cash  = Math.max(0, (G.cash  || 0) + (o.cashDelta || 0));
+                  G.rides = Math.max(0, (G.rides || 0) + (o.rideDelta || 0));
+                  snap.ref.remove();
+                  saveGame();
+                  updateAllDisplays();
+                  notify('You were attacked!');
+                });
               const today = new Date().toDateString();
               if (G.casinoResetDay !== today) {
                 G.casinoWonToday = 0;
@@ -4410,6 +4522,7 @@ function init() {
         });
       });
     } else {
+      if (currentUser) db.ref('attack_outcomes/' + currentUser.uid).off();
       currentUser = null;
       if (tickInterval) { clearInterval(tickInterval); tickInterval = null; }
       showPage('login');
