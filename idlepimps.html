@@ -1934,6 +1934,7 @@ function updateAllDisplays() {
   setText('tt-hhap', hh); setText('tt-thap', th);
   setText('tt-turns-left', fmt(G.turns));
   setText('tt-crack', fmt(G.crack)); setText('tt-condoms', fmt(G.condoms));
+  const ttLoc = document.getElementById('tt-location'); if (ttLoc && G.city) ttLoc.value = G.city;
 
   // Mart
   setText('mart-cash', fmt(G.cash));
