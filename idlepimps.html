@@ -2033,7 +2033,19 @@ function loadAllPlayers(callback) {
         cachedPlayers.push(p);
       });
       cachedPlayers.sort((a, b) => getNetWorth(b) - getNetWorth(a));
-      if (callback) callback(cachedPlayers);
+      // Merge bots into cachedPlayers
+      db.ref('bots').once('value', botSnap => {
+        botSnap.forEach(child => {
+          const b = child.val();
+          if ((b.roundId || 0) < currentRoundId) return;
+          b.uid = child.key;
+          b.isBot = true;
+          b.isPlayer = false;
+          cachedPlayers.push(b);
+        });
+        cachedPlayers.sort((a, b) => getNetWorth(b) - getNetWorth(a));
+        if (callback) callback(cachedPlayers);
+      });
     }, err => {
       ['rank-tbody','city-rank-tbody','atk-rank-tbody'].forEach(id => {
         const el = document.getElementById(id);
@@ -2068,11 +2080,12 @@ function loadAndRenderRankings() {
         const bg = p.isPlayer ? '#1a3300' : '';
         const pnw = getNetWorth(p);
         const gangName = p.gang ? p.gang.name : '---';
+        const idColor = p.isBot ? '#ffcc33' : '#FFFFFF';
         const tr = document.createElement('tr');
         tr.style.background = bg;
         tr.innerHTML = `
           <td align="center"><font color="${rankColor}" size="1" face="VERDANA"><b>${rank}</b></font></td>
-          <td align="left"><font color="#FFCC66" size="1" face="VERDANA"><b>${p.name} (<a href="#" class="link" onclick="viewProfile('${p.uid}')"># ${p.id||'?'}</a>)</b></font></td>
+          <td align="left"><font color="#FFCC66" size="1" face="VERDANA"><b>${p.name} (<a href="#" class="link" onclick="viewProfile('${p.uid}')"># <font color="${idColor}">${p.id||'?'}</font></a>)</b></font></td>
           <td align="right"><font color="#CC0033" size="1" face="VERDANA"><b>$${fmt(pnw)}</b></font></td>
           <td align="right"><font color="#FF9900" size="1" face="VERDANA"><b>${fmt(p.hoes)}</b></font></td>
           <td align="right"><font color="#993300" size="1" face="VERDANA"><b>${fmt(p.thugs)}</b></font></td>
@@ -2195,7 +2208,111 @@ function updateClock() {
 }
 
 // ============================================================
-// TURN TICKER
+// BOT SYSTEM
+// ============================================================
+const BOT_NAMES = [
+  'Silky Sam','Diamond Dave','Goldfinger','Big Daddy Kane','Mack the Knife',
+  'Iceberg Slim','Neon Leroy','Velvet Jones','Slick Rick','Platinum Pat',
+  'Cadillac Ray','Ivory Tone','Champagne Chuck','Broadway Benny','Rolls Royce Rico',
+  'Sweet Willie','Fancy Frank','Hollywood Hank','Uptown Vic','Cash Money Carl',
+  'Smooth Operator','Tricky Ricky','Disco Dex','Cool Breeze','Lucky Louie',
+  'Boss Hog','The Fly Guy','Satin Steve','Kingpin Kenny','Money Mike',
+  'Furcoat Freddy','Rhinestone Rex','Nightly Nick','Big Bank Hank','Teflon Don',
+  'Checkered Chad','Suede Sullivan','Lord Livington','Playa Playa Pete','Flashy Phil',
+  'Midnight Mac','High Roller Hal','Deuce Wild','Scarlet Sal','Candyman',
+  'Boogie Brown','Razor Ray','Street Legend','Silvertongue','Velour Victor',
+  'Precious Percy','Two-Timer Tim','Pimpy Pete','Ace Boon','Golden Gate Gary',
+  'Stacks Malone','Cheddar Bob','Pinky Ring Paul','Benzes & Beemers','Night Train Ned',
+  'Two Suits Tony','Leopard Larry','Babyface Mel','Mink Coat Marcus','Lowrider Len',
+  'Slippery Sam','Rhinegold Ross','Limo Larry','Snake Eyes Sal','Dapper Dan',
+  'Butterscotch Beau','Magnolia Mike','Big Spender','Champagne Papi','Sweet Talker',
+  'Mellow Yellow','Wicked Wayne','Cool Hand Luke','Count Cashula','Velvet Thunder'
+];
+const BOT_CITIES = ['nyc','la','chicago','miami','houston','philly','detroit','atlanta'];
+
+function seedBots(roundId) {
+  db.ref('botConfig').once('value', cfgSnap => {
+    const cfg = cfgSnap.val() || {};
+    const count = cfg.count || 50;
+    const shuffled = BOT_NAMES.slice().sort(() => Math.random() - 0.5).slice(0, count);
+    const updates = {};
+    shuffled.forEach((name, i) => {
+      const botId = i + 1; // bots use IDs 1-50; real players start at 1001+
+      const city = BOT_CITIES[Math.floor(Math.random() * BOT_CITIES.length)];
+      const hoes  = Math.floor(Math.random() * 30) + 5;
+      const thugs = Math.floor(Math.random() * 10) + 1;
+      updates['bots/bot_' + botId] = {
+        id: botId, name, city, isBot: true, roundId: roundId || 1,
+        cash: Math.floor(Math.random() * 5000) + 500,
+        hoes, thugs, rides: Math.floor(Math.random() * 3),
+        crack: Math.floor(hoes * 2), condoms: Math.floor(hoes * 3),
+        weed: 0, beer: 0, ak: Math.floor(thugs * 0.5), vest: 0,
+        payout: 50, turns: Math.floor(Math.random() * 200) + 40, nw: 0
+      };
+    });
+    updates['botConfig/roundId'] = roundId || 1;
+    db.ref().update(updates);
+  });
+}
+
+function runBotTick() {
+  db.ref('botConfig').once('value', cfgSnap => {
+    const cfg = cfgSnap.val() || {};
+    if (cfg.enabled === false) return;
+    const tickRoundId = G.roundId || 1;
+    if ((cfg.roundId || 0) < tickRoundId) { seedBots(tickRoundId); return; }
+    db.ref('bots').once('value', botsSnap => {
+      if (!botsSnap.exists()) { seedBots(tickRoundId); return; }
+      const updates = {};
+      botsSnap.forEach(child => {
+        const b = child.val();
+        const key = child.key;
+        let { cash, hoes, thugs, rides, crack, condoms, ak, vest, turns, payout } = b;
+        turns = Math.min(4000, (turns || 0) + 40);
+        if (turns > 200 && hoes > 0) {
+          const spendTurns = Math.min(80, turns - 200);
+          const earned = Math.floor(hoes * (payout / 100) * spendTurns * (Math.random() * 0.4 + 0.8));
+          const condomsUsed = Math.min(condoms, Math.floor(hoes * spendTurns * 0.05));
+          cash += earned; condoms = Math.max(0, condoms - condomsUsed); turns -= spendTurns;
+        }
+        if (cash > 8000 && condoms < hoes * 5) {
+          const buyAmt = Math.min(Math.floor(hoes * 10), Math.floor(cash * 0.2 / 5));
+          condoms += buyAmt; cash -= buyAmt * 5;
+        }
+        if (cash > 5000 && crack < hoes * 2) {
+          const buyAmt = Math.min(Math.floor(hoes * 5), Math.floor(cash * 0.1 / 10));
+          crack += buyAmt; cash -= buyAmt * 10;
+        }
+        if (Math.random() < 0.05) {
+          b.city = BOT_CITIES[Math.floor(Math.random() * BOT_CITIES.length)];
+        }
+        if (Math.random() < 0.10) {
+          botsSnap.forEach(tChild => {
+            if (tChild.key === key) return;
+            const t = tChild.val();
+            const tnw = (t.cash||0)+(t.hoes||0)*250+(t.thugs||0)*1000+(t.rides||0)*1000;
+            const mnw = (cash||0)+(hoes||0)*250+(thugs||0)*1000+(rides||0)*1000;
+            if (t.city === b.city && tnw >= mnw*0.5 && tnw <= mnw*2) {
+              const stolen = Math.floor((t.cash||0) * (Math.random()*0.1+0.05));
+              updates['bots/' + tChild.key + '/cash'] = Math.max(0, (t.cash||0) - stolen);
+              cash += stolen;
+              db.ref('attacks').push({
+                fromUid: key, fromName: b.name, toUid: tChild.key, toName: t.name,
+                type: 'bot_raid', msg: '', time: Date.now(), isBot: true
+              });
+              return true;
+            }
+          });
+        }
+        const nw = cash+(hoes||0)*250+(thugs||0)*1000+(rides||0)*1000+(crack||0)*2;
+        updates['bots/' + key] = Object.assign({}, b, { cash, hoes, thugs, rides, crack, condoms, ak, vest, turns, nw, city: b.city });
+      });
+      if (Object.keys(updates).length) db.ref().update(updates);
+    });
+  });
+}
+// G÷G÷ End Bot System G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷G÷
+
 // ============================================================
 const TICK_INTERVAL_MS = 10 * 60 * 1000;
 let tickInterval;
@@ -2225,6 +2342,9 @@ function applyOfflineTurns(callback) {
   });
 }
 
+// ============================================================
+// TURN TICKER
+// ============================================================
 function startTicker() {
   tickInterval = setInterval(() => {
     countdownSecs--;
@@ -2250,6 +2370,7 @@ function startTicker() {
             if (!ridCommitted || ridErr) return;
             const newRoundId = ridSnap.val();
             const oldRoundId = newRoundId - 1;
+            seedBots(newRoundId);
             // Archive full standings to round_history
             db.ref('players').once('value', allSnap => {
               const sorted = [];
@@ -2320,6 +2441,7 @@ function startTicker() {
           G.turns = Math.min(4000, G.turns + 40);
           updateAllDisplays();
           saveGame();
+          runBotTick();
         }
         // If aborted, another client fired — do nothing
       });

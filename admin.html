@@ -87,6 +87,31 @@ label { color: #aaa; font-size: 11px; font-family: Verdana; }
         </div>
       </div>
 
+      <!-- BOT CONFIG PANEL -->
+      <div class="panel">
+        <h2>Bot Config
+          <button class="btn small" style="float:right;margin-top:-2px;" onclick="loadBotRoster()">↻ Roster</button>
+        </h2>
+        <div class="field-row">
+          <label>Enabled</label>
+          <input type="checkbox" id="bot-enabled" onchange="saveBotConfig()" style="width:auto;">
+        </div>
+        <div class="field-row">
+          <label>Bot Count</label>
+          <input id="bot-count" type="number" value="50" min="1" max="80" style="width:80px;">
+          <button class="btn small" onclick="saveBotConfig()">Save</button>
+        </div>
+        <div style="margin-top:8px;">
+          <button class="btn" onclick="doSeedBots()">⚙ Reshuffle Bots Now</button>
+        </div>
+        <div style="overflow-x:auto; max-height:160px; overflow-y:auto; margin-top:10px;">
+          <table id="bot-roster-table">
+            <thead><tr><th>ID</th><th>Name</th><th>City</th><th>NW</th><th>Turns</th></tr></thead>
+            <tbody id="bot-roster-tbody"><tr><td colspan="5" style="color:#555;text-align:center;">Click ↻ Roster</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- ATTACK LOG -->
       <div class="panel">
         <h2>Attack Log
@@ -301,6 +326,7 @@ auth.onAuthStateChanged(user => {
     loadPlayers();
     refreshTickInfo();
     startTickCountdown();
+    loadBotConfig();
   } else if (user) {
     // Logged in but not admin
     document.getElementById('access-denied').style.display = 'block';
@@ -601,6 +627,87 @@ function toggleDangerZone() {
     body.style.display = 'none';
     toggle.textContent = '[expand]';
   }
+}
+
+// ---- BOT CONFIG ----
+function loadBotConfig() {
+  db.ref('botConfig').once('value', snap => {
+    const cfg = snap.val() || {};
+    const el = document.getElementById('bot-enabled');
+    const cnt = document.getElementById('bot-count');
+    if (el) el.checked = cfg.enabled !== false;
+    if (cnt) cnt.value = cfg.count || 50;
+  });
+}
+function saveBotConfig() {
+  const enabled = document.getElementById('bot-enabled').checked;
+  const count = parseInt(document.getElementById('bot-count').value) || 50;
+  db.ref('botConfig').update({ enabled, count }, err => {
+    adminLog(err ? 'Bot config save failed: ' + err.message : 'Bot config saved (enabled=' + enabled + ', count=' + count + ')');
+  });
+}
+function doSeedBots() {
+  db.ref('tick/roundId').once('value', snap => {
+    const roundId = snap.val() || 1;
+    const count = parseInt(document.getElementById('bot-count').value) || 50;
+    const BOT_NAMES = [
+      'Silky Sam','Diamond Dave','Goldfinger','Big Daddy Kane','Mack the Knife',
+      'Iceberg Slim','Neon Leroy','Velvet Jones','Slick Rick','Platinum Pat',
+      'Cadillac Ray','Ivory Tone','Champagne Chuck','Broadway Benny','Rolls Royce Rico',
+      'Sweet Willie','Fancy Frank','Hollywood Hank','Uptown Vic','Cash Money Carl',
+      'Smooth Operator','Tricky Ricky','Disco Dex','Cool Breeze','Lucky Louie',
+      'Boss Hog','The Fly Guy','Satin Steve','Kingpin Kenny','Money Mike',
+      'Furcoat Freddy','Rhinestone Rex','Nightly Nick','Big Bank Hank','Teflon Don',
+      'Checkered Chad','Suede Sullivan','Lord Livington','Playa Playa Pete','Flashy Phil',
+      'Midnight Mac','High Roller Hal','Deuce Wild','Scarlet Sal','Candyman',
+      'Boogie Brown','Razor Ray','Street Legend','Silvertongue','Velour Victor',
+      'Precious Percy','Two-Timer Tim','Pimpy Pete','Ace Boon','Golden Gate Gary',
+      'Stacks Malone','Cheddar Bob','Pinky Ring Paul','Benzes & Beemers','Night Train Ned',
+      'Two Suits Tony','Leopard Larry','Babyface Mel','Mink Coat Marcus','Lowrider Len',
+      'Slippery Sam','Rhinegold Ross','Limo Larry','Snake Eyes Sal','Dapper Dan',
+      'Butterscotch Beau','Magnolia Mike','Big Spender','Champagne Papi','Sweet Talker',
+      'Mellow Yellow','Wicked Wayne','Cool Hand Luke','Count Cashula','Velvet Thunder'
+    ];
+    const BOT_CITIES = ['nyc','la','chicago','miami','houston','philly','detroit','atlanta'];
+    const shuffled = BOT_NAMES.slice().sort(() => Math.random() - 0.5).slice(0, count);
+    const updates = {};
+    shuffled.forEach((name, i) => {
+      const botId = i + 1;
+      const city = BOT_CITIES[Math.floor(Math.random() * BOT_CITIES.length)];
+      const hoes = Math.floor(Math.random() * 30) + 5;
+      const thugs = Math.floor(Math.random() * 10) + 1;
+      updates['bots/bot_' + botId] = {
+        id: botId, name, city, isBot: true, roundId,
+        cash: Math.floor(Math.random() * 5000) + 500,
+        hoes, thugs, rides: Math.floor(Math.random() * 3),
+        crack: Math.floor(hoes * 2), condoms: Math.floor(hoes * 3),
+        weed: 0, beer: 0, ak: Math.floor(thugs * 0.5), vest: 0,
+        payout: 50, turns: Math.floor(Math.random() * 200) + 40, nw: 0
+      };
+    });
+    updates['botConfig/roundId'] = roundId;
+    db.ref().update(updates, err => {
+      adminLog(err ? 'Seed failed: ' + err.message : count + ' bots seeded for round ' + roundId);
+      loadBotRoster();
+    });
+  });
+}
+function loadBotRoster() {
+  const tbody = document.getElementById('bot-roster-tbody');
+  tbody.innerHTML = '<tr><td colspan="5" style="color:#555;text-align:center;">Loading...</td></tr>';
+  db.ref('bots').once('value', snap => {
+    const bots = [];
+    snap.forEach(child => { const b = child.val(); b._key = child.key; bots.push(b); });
+    bots.sort((a, b) => (b.nw||0) - (a.nw||0));
+    tbody.innerHTML = bots.length ? '' : '<tr><td colspan="5" style="color:#555;text-align:center;">No bots found</td></tr>';
+    bots.forEach(b => {
+      const nw = (b.cash||0)+(b.hoes||0)*250+(b.thugs||0)*1000+(b.rides||0)*1000+(b.crack||0)*2;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td><font color="#ffcc33">${b.id||'?'}</font></td><td>${b.name}</td><td>${b.city||'?'}</td><td>$${(nw).toLocaleString()}</td><td>${b.turns||0}</td>`;
+      tbody.appendChild(tr);
+    });
+    adminLog('Bot roster loaded: ' + bots.length + ' bots');
+  });
 }
 
 // ---- ATTACK LOG ----
