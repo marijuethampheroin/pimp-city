@@ -2211,22 +2211,30 @@ function updateClock() {
 // BOT SYSTEM
 // ============================================================
 const BOT_NAMES = [
-  'Silky Sam','Diamond Dave','Goldfinger','Big Daddy Kane','Mack the Knife',
-  'Iceberg Slim','Neon Leroy','Velvet Jones','Slick Rick','Platinum Pat',
-  'Cadillac Ray','Ivory Tone','Champagne Chuck','Broadway Benny','Rolls Royce Rico',
-  'Sweet Willie','Fancy Frank','Hollywood Hank','Uptown Vic','Cash Money Carl',
-  'Smooth Operator','Tricky Ricky','Disco Dex','Cool Breeze','Lucky Louie',
-  'Boss Hog','The Fly Guy','Satin Steve','Kingpin Kenny','Money Mike',
-  'Furcoat Freddy','Rhinestone Rex','Nightly Nick','Big Bank Hank','Teflon Don',
-  'Checkered Chad','Suede Sullivan','Lord Livington','Playa Playa Pete','Flashy Phil',
-  'Midnight Mac','High Roller Hal','Deuce Wild','Scarlet Sal','Candyman',
-  'Boogie Brown','Razor Ray','Street Legend','Silvertongue','Velour Victor',
-  'Precious Percy','Two-Timer Tim','Pimpy Pete','Ace Boon','Golden Gate Gary',
-  'Stacks Malone','Cheddar Bob','Pinky Ring Paul','Benzes & Beemers','Night Train Ned',
-  'Two Suits Tony','Leopard Larry','Babyface Mel','Mink Coat Marcus','Lowrider Len',
-  'Slippery Sam','Rhinegold Ross','Limo Larry','Snake Eyes Sal','Dapper Dan',
-  'Butterscotch Beau','Magnolia Mike','Big Spender','Champagne Papi','Sweet Talker',
-  'Mellow Yellow','Wicked Wayne','Cool Hand Luke','Count Cashula','Velvet Thunder'
+  // AIM username energy
+  'xX_SlickWillie_Xx','KrAzYpImP420','DaRkPrInCe99','d00mPimp','GaNgStA4LyFe',
+  'CrUnKmOnEy','xXxPhatLootzxXx','AiMaWaY2000','Ph34rMyMack','sk8ordiePimp',
+  // nu-metal edgelord
+  'SlipknotMaggot','KoRnFedPimp','LimpBizkitMack','AngstKing','PaInIsMyGame',
+  'bl00dMoneyRox','KiLLsWiTcHRico','MuDvAyNeFrank','DaRkNeSsRuLeZ','ColdWorldPlayer',
+  // l33tspeak
+  'l33tPh4t','Ph34rMyRollz','h4x0rPimp','0wN3dU','pr0nStarMoney',
+  '1337PimpGod','n00bKrush3r','g0dM0d3Mack','PwN4g3King','xX_k1LL4H_Xx',
+  // south park
+  'CartmanRulez','KilledKenny69','MrHankeyMoney','CheezyPoofPimp','ScuzzleButt',
+  'TimmaayMack','BigGayAl99','WATCHYOURMOUTH','IgnorantSlut','SuperSerialMack',
+  // wwf attitude era
+  'StoneColdMack','DXGenPimp','RockBottomRico','3sixteenSteve','MankindFoley',
+  'HeartbreakMack','ChairShotCharlie','KnowYourRoleMack','JerichoY2Pimp','DXAreYouReady',
+  // matrix / fight club
+  'TylerDurden99','RuleOneRico','FollowTheRabbit','MorpheusDisciple','NeoTheMack',
+  'IAmJacksMack','RedPillRico','WakeUpNeo99','NoSpoonNeeded','TheChosenOneMack',
+  // napster / early internet
+  'NapsterFreeMack','KazaaPimp','LimeWireLarry','WinMXWillie','DL4FreeDave',
+  'DialUpDomino','FreeAOLDiscs','BurnACDRico','GnutellaGordo','KaZaAKing99',
+  // gta / early gaming
+  'TommyVercetti99','CJFromGroveStreet','WantedLevel5','VicVanceMack','BigSmokeRico',
+  'CopKillerPimp','GrindTimeTony','OGLocMoney','RyderWasHere','BallaSlayerMack'
 ];
 const BOT_CITIES = ['nyc','la','chicago','miami','houston','philly','detroit','atlanta'];
 
@@ -3016,10 +3024,22 @@ function viewProfile(uid) {
     return;
   }
 
-  // Fetch live data from Firebase
+  // Fetch live data from Firebase — check players/ then bots/
   db.ref('players/' + uid).once('value', snap => {
-    const target = snap.val();
-    if (!target) { notify('Pimp not found.'); return; }
+    let target = snap.val();
+    if (!target) {
+      db.ref('bots/' + uid).once('value', botSnap => {
+        const bot = botSnap.val();
+        if (!bot) { notify('Pimp not found.'); return; }
+        renderTargetProfile(uid, bot);
+      });
+      return;
+    }
+    renderTargetProfile(uid, target);
+  });
+}
+
+function renderTargetProfile(uid, target) {
     target.uid = uid;
 
     const tnw = getNetWorth(target);
@@ -3091,7 +3111,6 @@ function viewProfile(uid) {
     html += `<div style="margin-top:8px;"><a href="#" class="link" onclick="showPage('rankings')"><b>Return to rankings</b></a></div>`;
     document.getElementById('profile-content').innerHTML = html;
     showPage('profile');
-  });
 }
 
 function prepAttack(id) {
