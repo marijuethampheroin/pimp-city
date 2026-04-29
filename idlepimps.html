@@ -2080,7 +2080,7 @@ function loadAndRenderRankings() {
         const bg = p.isPlayer ? '#1a3300' : '';
         const pnw = getNetWorth(p);
         const gangName = p.gang ? p.gang.name : '---';
-        const idColor = p.isBot ? '#ffcc33' : '#FFFFFF';
+        const idColor = p.isBot ? '#FFFFFF' : '#ffcc33';
         const tr = document.createElement('tr');
         tr.style.background = bg;
         tr.innerHTML = `

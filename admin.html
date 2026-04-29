@@ -668,7 +668,9 @@ function doSeedBots() {
       'Butterscotch Beau','Magnolia Mike','Big Spender','Champagne Papi','Sweet Talker',
       'Mellow Yellow','Wicked Wayne','Cool Hand Luke','Count Cashula','Velvet Thunder'
     ];
-    const BOT_CITIES = ['nyc','la','chicago','miami','houston','philly','detroit','atlanta'];
+    const BOT_CITIES = ['nyc','london','atlanta','vegas'];
+    // Clear all existing bots first, then seed fresh
+    db.ref('bots').remove(() => {
     const shuffled = BOT_NAMES.slice().sort(() => Math.random() - 0.5).slice(0, count);
     const updates = {};
     shuffled.forEach((name, i) => {
@@ -690,6 +692,7 @@ function doSeedBots() {
       adminLog(err ? 'Seed failed: ' + err.message : count + ' bots seeded for round ' + roundId);
       loadBotRoster();
     });
+    }); // end bots.remove
   });
 }
 function loadBotRoster() {
