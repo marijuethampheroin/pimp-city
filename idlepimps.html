@@ -2565,6 +2565,16 @@ function startTicker() {
   }, 1000);
 }
 
+// Bot ticker - runs every 30s independently of player activity.
+// Also fires inside the per-turn transaction, but this ensures bots
+// keep moving even when no real players are logged in.
+let botTickInterval = null;
+function startBotTicker() {
+  if (botTickInterval) clearInterval(botTickInterval);
+  botTickInterval = setInterval(() => { runBotTick(); }, 30000);
+  runBotTick(); // fire immediately on login too
+}
+
 // ============================================================
 // GAME ACTIONS
 // ============================================================
@@ -4605,6 +4615,7 @@ function doActivate() {
             updateAllDisplays();
             if (tickInterval) clearInterval(tickInterval);
             startTicker();
+            startBotTicker();
             document.body.classList.toggle('alt-theme', !!G.altTheme);
             loadLoginTop5();
             showPage('main');
@@ -4727,6 +4738,7 @@ function init() {
               updateAllDisplays();
               if (tickInterval) clearInterval(tickInterval);
               startTicker();
+              startBotTicker();
               // Real-time listener for incoming attacks while online.
               // Only picks up outcomes written after login (startAt loginTime)
               // so we don't double-apply anything loadFromFirebase already consumed.
