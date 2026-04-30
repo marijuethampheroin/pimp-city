@@ -4152,7 +4152,7 @@ function loadLoginTop5() {
         const players = [];
         snap.forEach(child => {
           const p = child.val();
-          if (p && p.name) {
+          if (p && p.name && (p.roundId || 0) >= currentRoundId) {
             const nw = (p.cash||0)+(p.hoes||0)*250+(p.thugs||0)*1000+(p.rides||0)*1000+(p.crack||0)*2;
             players.push({ name: p.name, id: p.id||0, gang: p.gang ? p.gang.name : '---', nw });
           }
