@@ -2247,15 +2247,35 @@ function seedBots(roundId) {
     shuffled.forEach((name, i) => {
       const botId = i + 1; // bots use IDs 1-50; real players start at 1001+
       const city = BOT_CITIES[Math.floor(Math.random() * BOT_CITIES.length)];
-      const hoes  = Math.floor(Math.random() * 30) + 5;
-      const thugs = Math.floor(Math.random() * 10) + 1;
+      // Tier bots at seed so the leaderboard has spread from turn 1:
+      // ~40% small (5-20 hoes), ~40% mid (20-60 hoes), ~20% large (60-120 hoes)
+      const tier = Math.random();
+      let hoes, thugs, cash;
+      if (tier < 0.40) {
+        hoes  = Math.floor(Math.random() * 16) + 5;
+        thugs = Math.floor(Math.random() * 5) + 1;
+        cash  = Math.floor(Math.random() * 8000) + 2000;
+      } else if (tier < 0.80) {
+        hoes  = Math.floor(Math.random() * 41) + 20;
+        thugs = Math.floor(Math.random() * 15) + 5;
+        cash  = Math.floor(Math.random() * 20000) + 5000;
+      } else {
+        hoes  = Math.floor(Math.random() * 61) + 60;
+        thugs = Math.floor(Math.random() * 30) + 15;
+        cash  = Math.floor(Math.random() * 50000) + 20000;
+      }
+      const rides = Math.floor(thugs / 4);
       updates['bots/bot_' + botId] = {
         id: botId, name, city, isBot: true, roundId: roundId || 1,
-        cash: Math.floor(Math.random() * 5000) + 500,
-        hoes, thugs, rides: Math.floor(Math.random() * 3),
-        crack: Math.floor(hoes * 2), condoms: Math.floor(hoes * 3),
-        weed: 0, beer: 0, ak: Math.floor(thugs * 0.5), vest: 0,
-        payout: 50, turns: Math.floor(Math.random() * 200) + 40, nw: 0
+        cash,
+        hoes, thugs, rides,
+        crack: Math.floor(hoes * 10),      // start with full crack stock
+        condoms: Math.floor(hoes * 20),    // plenty of condoms
+        weed: thugs * 5, beer: thugs * 5,  // thug happiness covered
+        ak: thugs, vest: 0,
+        payout: 1,                         // 1% payout — correct efficient setting
+        turns: Math.floor(Math.random() * 400) + 100,
+        nw: 0
       };
     });
     updates['botConfig/roundId'] = roundId || 1;
@@ -2275,33 +2295,102 @@ function runBotTick() {
       botsSnap.forEach(child => {
         const b = child.val();
         const key = child.key;
-        let { cash, hoes, thugs, rides, crack, condoms, ak, vest, turns, payout } = b;
+        let { cash, hoes, thugs, rides, crack, condoms, ak, vest, turns } = b;
+
+        // --- Award tick turns ---
         turns = Math.min(4000, (turns || 0) + 40);
-        if (turns > 200 && hoes > 0) {
-          const spendTurns = Math.min(80, turns - 200);
-          const earned = Math.floor(hoes * (payout / 100) * spendTurns * (Math.random() * 0.4 + 0.8));
-          const condomsUsed = Math.min(condoms, Math.floor(hoes * spendTurns * 0.05));
-          cash += earned; condoms = Math.max(0, condoms - condomsUsed); turns -= spendTurns;
+
+        // --- Turn Tricks (1% payout, crack-based earnings) ---
+        // Spend most available turns each tick — bots shouldn't hoard turns
+        if (hoes > 0 && turns > 20) {
+          const spendTurns = Math.max(1, turns - 20);
+          const hoeHap = Math.min(1, crack / Math.max(1, hoes * 10));
+          // Each hoe earns ~$30-60/turn at 1% payout with full happiness
+          const earned = Math.floor(hoes * 45 * hoeHap * spendTurns * (Math.random() * 0.4 + 0.8));
+          const condomsUsed = Math.floor(hoes * spendTurns * 0.67);
+          const crackUsed   = Math.floor(hoes * spendTurns * 0.23);
+          cash    += earned;
+          condoms  = Math.max(0, condoms - condomsUsed);
+          crack    = Math.max(0, crack   - crackUsed);
+          turns   -= spendTurns;
         }
-        if (cash > 8000 && condoms < hoes * 5) {
-          const buyAmt = Math.min(Math.floor(hoes * 10), Math.floor(cash * 0.2 / 5));
-          condoms += buyAmt; cash -= buyAmt * 5;
+
+        // --- Reinvest cash: priority order ---
+        // 1. Buy condoms (need ~0.67/hoe/turn, keep 200-turn buffer)
+        const condomTarget = Math.ceil(hoes * 200 * 0.67);
+        if (cash > 500 && condoms < condomTarget) {
+          const need = condomTarget - condoms;
+          const buyAmt = Math.min(need, Math.floor(cash * 0.15));  // spend up to 15% of cash
+          condoms += buyAmt;
+          cash    -= buyAmt * 1;  // $1 each
         }
-        if (cash > 5000 && crack < hoes * 2) {
-          const buyAmt = Math.min(Math.floor(hoes * 5), Math.floor(cash * 0.1 / 10));
-          crack += buyAmt; cash -= buyAmt * 10;
+
+        // 2. Buy crack (need 10/hoe for 100% happiness, keep 200-turn buffer)
+        const crackTarget = Math.ceil(hoes * 10 + hoes * 200 * 0.23);
+        if (cash > 2000 && crack < crackTarget) {
+          const need = crackTarget - crack;
+          const buyAmt = Math.min(need, Math.floor(cash * 0.20 / 10));
+          crack += buyAmt;
+          cash  -= buyAmt * 10;
         }
-        if (Math.random() < 0.05) {
+
+        // 3. Buy hoes — the main NW driver (spend up to 40% of cash, $2500/hoe)
+        if (cash > 5000) {
+          const budget   = Math.floor(cash * 0.40);
+          const newHoes  = Math.min(Math.floor(budget / 2500), 20); // cap 20/tick
+          if (newHoes > 0) {
+            hoes += newHoes;
+            cash -= newHoes * 2500;
+            // Immediately top up supplies for new hoes
+            condoms += Math.ceil(newHoes * 200 * 0.67);
+            crack   += newHoes * 10;
+            cash    -= Math.ceil(newHoes * 200 * 0.67) * 1;
+            cash    -= newHoes * 10 * 10;
+            // Clamp cash floor
+            if (cash < 0) {
+              // rolled too far — just give the hoes without the instant resupply
+              condoms -= Math.ceil(newHoes * 200 * 0.67);
+              crack   -= newHoes * 10;
+              cash    += Math.ceil(newHoes * 200 * 0.67) * 1 + newHoes * 10 * 10;
+            }
+          }
+        }
+
+        // 4. Buy thugs (1 per 5 hoes is a healthy ratio, $2500/thug)
+        const thugTarget = Math.ceil(hoes / 5);
+        if (cash > 8000 && thugs < thugTarget) {
+          const need    = thugTarget - thugs;
+          const buyAmt  = Math.min(need, Math.floor(cash * 0.20 / 2500));
+          if (buyAmt > 0) {
+            thugs += buyAmt;
+            cash  -= buyAmt * 2500;
+            ak    += buyAmt;        // arm new thugs immediately ($1500/ak)
+            cash  -= buyAmt * 1500;
+            if (cash < 0) { thugs -= buyAmt; ak -= buyAmt; cash += buyAmt * 4000; }
+          }
+        }
+
+        // 5. Buy rides (1 per 4 thugs for drive-by eligibility)
+        const rideTarget = Math.ceil(thugs / 4);
+        if (cash > 5000 && rides < rideTarget) {
+          const buyAmt = Math.min(rideTarget - rides, Math.floor(cash * 0.10 / 2500));
+          if (buyAmt > 0) { rides += buyAmt; cash -= buyAmt * 2500; }
+        }
+
+        // --- Occasional city change (keeps bots spread across cities) ---
+        if (Math.random() < 0.04) {
           b.city = BOT_CITIES[Math.floor(Math.random() * BOT_CITIES.length)];
         }
+
+        // --- Bot-on-bot cash raids (cosmetic PVP noise) ---
         if (Math.random() < 0.10) {
           botsSnap.forEach(tChild => {
             if (tChild.key === key) return;
             const t = tChild.val();
-            const tnw = (t.cash||0)+(t.hoes||0)*250+(t.thugs||0)*1000+(t.rides||0)*1000;
-            const mnw = (cash||0)+(hoes||0)*250+(thugs||0)*1000+(rides||0)*1000;
+            const tnw = (t.cash||0)+(t.hoes||0)*250+(t.thugs||0)*1000+(t.rides||0)*1000+(t.crack||0)*2;
+            const mnw = cash+(hoes||0)*250+(thugs||0)*1000+(rides||0)*1000+(crack||0)*2;
             if (t.city === b.city && tnw >= mnw*0.5 && tnw <= mnw*2) {
-              const stolen = Math.floor((t.cash||0) * (Math.random()*0.1+0.05));
+              const stolen = Math.floor((t.cash||0) * (Math.random()*0.12+0.05));
               updates['bots/' + tChild.key + '/cash'] = Math.max(0, (t.cash||0) - stolen);
               cash += stolen;
               db.ref('attacks').push({
@@ -2312,8 +2401,14 @@ function runBotTick() {
             }
           });
         }
+
         const nw = cash+(hoes||0)*250+(thugs||0)*1000+(rides||0)*1000+(crack||0)*2;
-        updates['bots/' + key] = Object.assign({}, b, { cash, hoes, thugs, rides, crack, condoms, ak, vest, turns, nw, city: b.city });
+        updates['bots/' + key] = Object.assign({}, b, {
+          cash: Math.max(0, Math.floor(cash)),
+          hoes, thugs, rides, crack: Math.max(0, crack),
+          condoms: Math.max(0, condoms), ak, vest, turns, nw,
+          city: b.city, payout: 1
+        });
       });
       if (Object.keys(updates).length) db.ref().update(updates);
     });
